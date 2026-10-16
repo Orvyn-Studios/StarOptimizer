@@ -19,6 +19,9 @@
   "author": "StarOptimizer",
   "license": "UNLICENSED",
   "type": "commonjs",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "electron": "^44.2.0",
