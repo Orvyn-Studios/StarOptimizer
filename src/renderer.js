@@ -243,18 +243,18 @@ const scanExperience = window.createScanExperience({
 // Keep the optimization goal explicit. The scan itself never changes Windows.
 const modePicker = document.createElement('label');
 modePicker.className = 'mode-selector';
-modePicker.style.cssText = 'display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0 16px;font-size:13px';
+
 const modeLabel = document.createElement('strong');
 modeLabel.textContent = 'Objetivo';
 const modeSelect = document.createElement('select');
 modeSelect.id = 'optimization-mode';
 modeSelect.setAttribute('aria-label', 'Objetivo de optimización');
-modeSelect.style.cssText = 'padding:10px 12px;border-radius:10px;max-width:100%;background:#202332;color:inherit;border:1px solid #ffffff30';
+
 for (const [value, cfg] of Object.entries(OPT_MODES)) {
   const option = document.createElement('option'); option.value = value; option.textContent = cfg.label; modeSelect.append(option);
 }
 const modeHint = document.createElement('span');
-modeHint.style.cssText = 'color:var(--muted);font-size:12px';
+modeHint.className = 'mode-hint';
 modeHint.textContent = OPT_MODES[optimizationMode].detail;
 modePicker.append(modeLabel, modeSelect, modeHint);
 document.getElementById('priority-date').before(modePicker);
@@ -273,7 +273,7 @@ function renderPriorities() {
   const automatic = Object.assign({}, ...items.filter(item => item.changes).map(item => item.changes));
   const available = Object.fromEntries(Object.entries(automatic).filter(([key]) => !isLocked(key)));
   if (Object.keys(available).length) {
-    const batch = button(`Revisar ${Object.keys(available).length} ajustes automáticos`, async () => {
+    const batch = button(`Revisar ${Object.keys(available).length} ajustes opcionales`, async () => {
       draft = available; clearProfile(); renderConfiguration(); await review();
     });
     batch.id = 'review-recommended'; list.before(batch);
