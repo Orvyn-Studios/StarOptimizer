@@ -1,5 +1,11 @@
 const $ = id => document.getElementById(id);
 const api = window.star;
+const OPT_MODES = Object.freeze({
+  intelligent: { label: 'Inteligente', detail: 'Solo problemas respaldados por lecturas del sistema.' },
+  gaming: { label: 'Gaming', detail: 'Máximo rendimiento práctico sin eliminar efectos visuales.' },
+  extreme: { label: 'Extremo', detail: 'Incluye ajustes visuales opcionales, todos reversibles.' }
+});
+let optimizationMode = 'intelligent';
 const nova = window.createNova();
 const novaSpace = $('nova-space');
 const novaHome = document.createElement('div');
@@ -234,8 +240,31 @@ const scanExperience = window.createScanExperience({
   returnNova() { (view === 'overview' ? novaHome : novaDock).append(novaSpace); },
   navigate: show
 });
+// Keep the optimization goal explicit. The scan itself never changes Windows.
+const modePicker = document.createElement('label');
+modePicker.className = 'mode-selector';
+modePicker.style.cssText = 'display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0 16px;font-size:13px';
+const modeLabel = document.createElement('strong');
+modeLabel.textContent = 'Objetivo';
+const modeSelect = document.createElement('select');
+modeSelect.id = 'optimization-mode';
+modeSelect.setAttribute('aria-label', 'Objetivo de optimización');
+modeSelect.style.cssText = 'padding:10px 12px;border-radius:10px;max-width:100%;background:#202332;color:inherit;border:1px solid #ffffff30';
+for (const [value, cfg] of Object.entries(OPT_MODES)) {
+  const option = document.createElement('option'); option.value = value; option.textContent = cfg.label; modeSelect.append(option);
+}
+const modeHint = document.createElement('span');
+modeHint.style.cssText = 'color:var(--muted);font-size:12px';
+modeHint.textContent = OPT_MODES[optimizationMode].detail;
+modePicker.append(modeLabel, modeSelect, modeHint);
+document.getElementById('priority-date').before(modePicker);
+modeSelect.addEventListener('change', () => {
+  optimizationMode = Object.hasOwn(OPT_MODES, modeSelect.value) ? modeSelect.value : 'intelligent';
+  modeHint.textContent = OPT_MODES[optimizationMode].detail;
+  if (snapshot) renderPriorities();
+});
 function renderPriorities() {
-  const items = window.starPriorities(snapshot);
+  const items = window.starPriorities(snapshot, optimizationMode);
   const nav = document.querySelector('[data-view="recommended"]');
   nav.disabled = !snapshot; nav.title = snapshot ? 'Ver las prioridades del último análisis' : 'Analiza tu equipo primero';
   $('priority-date').textContent = `Inventario: ${new Date(snapshot.at).toLocaleTimeString('es-ES')}${snapshot.errors.length ? ' · datos parciales' : ''}. CPU/RAM: ${new Date(snapshot.liveAt || snapshot.at).toLocaleTimeString('es-ES')}.`;
