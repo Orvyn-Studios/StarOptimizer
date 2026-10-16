@@ -7,7 +7,8 @@ window.createNova = function createNova() {
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
   const BLINK_INTERVAL = 10000;
   let visible = true, simple = false, destroyed = false;
-  let timer, lookTimer, frame, deadline = 0, target = { x: 0, y: 0 };
+  let timer, lookTimer, frame, reactionTimer, deadline = 0, target = { x: 0, y: 0 };
+  let busy = false;
   let pointerUntil = 0, lastLook = -1;
   let blinkIndex = 0;
   const animations = new Set();
@@ -99,7 +100,7 @@ window.createNova = function createNova() {
   }
   function center() { pointerUntil = 0; gaze(0, 0, { duration: 880 }); scheduleLook(2100); }
   function stop() {
-    clearTimeout(timer); clearTimeout(lookTimer); cancelAnimationFrame(frame); frame = null;
+    clearTimeout(timer); clearTimeout(lookTimer); clearTimeout(reactionTimer); cancelAnimationFrame(frame); frame = null;
     for (const animation of animations) animation.cancel();
     animations.clear();
     button.style.setProperty('--gaze-x', '0px'); button.style.setProperty('--gaze-y', '0px');
@@ -108,6 +109,7 @@ window.createNova = function createNova() {
   function refresh() {
     stop();
     space.classList.toggle('nova-still', !allowed());
+    space.dataset.novaState = allowed() && busy ? 'working' : 'idle';
     if (allowed()) {
       deadline = performance.now() + BLINK_INTERVAL;
       schedule();
@@ -128,8 +130,20 @@ window.createNova = function createNova() {
         visible = nextVisible; simple = nextSimple; refresh();
       }
     },
-    working() {},
-    react() {},
+    working(nextBusy = false) {
+      if (destroyed) return;
+      busy = Boolean(nextBusy);
+      clearTimeout(reactionTimer);
+      space.dataset.novaState = allowed() && busy ? 'working' : 'idle';
+    },
+    react(kind) {
+      if (!allowed() || busy || !['success', 'error', 'restore'].includes(kind)) return;
+      clearTimeout(reactionTimer);
+      space.dataset.novaState = kind;
+      reactionTimer = setTimeout(() => {
+        if (!destroyed) space.dataset.novaState = allowed() && busy ? 'working' : 'idle';
+      }, 1400);
+    },
     destroy() {
       destroyed = true; stop();
       document.removeEventListener('pointermove', pointerMove);
