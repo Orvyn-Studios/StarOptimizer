@@ -48,3 +48,27 @@ test('physical disk warnings take priority, unknown status is never a failure di
   const s=normal(); s.physicalDisks=[{Name:'SSD',HealthStatus:'Warning'},{Name:'Unknown disk',HealthStatus:'Unknown'}];
   const items=priorities(s); assert.equal(items.length,1); assert.equal(items[0].priority,0); assert.match(items[0].title,/Proteger/);
 });
+
+test('gaming only offers high-performance plan on AC when available; never disables visuals', () => {
+  const s = normal();
+  const high = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c';
+  s.onBattery = false;
+  s.configuration = { values: { power: balanced, animations: true }, plans: [{ id: balanced }, { id: high }] };
+  const gaming = priorities(s, 'gaming');
+  assert.equal(gaming.length, 1);
+  assert.deepEqual(gaming[0].changes, { power: high });
+  s.onBattery = true;
+  assert.deepEqual(priorities(s, 'gaming'), []);
+  s.onBattery = false; s.configuration.plans = [{ id: balanced }];
+  assert.deepEqual(priorities(s, 'gaming'), []);
+});
+test('extreme opt-in separates optional visual adjustments from actual diagnoses', () => {
+  const s = normal();
+  s.configuration = { values: { animations: true, menuAnimation: false, comboAnimation: true }, plans: [] };
+  assert.deepEqual(priorities(s), []);
+  assert.deepEqual(priorities(s, 'gaming'), []);
+  const items = priorities(s, 'extreme');
+  assert.equal(items.length, 1);
+  assert.deepEqual(items[0].changes, { animations: false, comboAnimation: false });
+  assert.match(items[0].evidence, /no una avería/);
+});
