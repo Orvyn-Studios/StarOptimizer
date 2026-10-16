@@ -19,16 +19,16 @@
     const cpu = s.cpu?.[0]?.LoadPercentage;
     if (!errors.includes('cpu') && Number.isFinite(cpu) && cpu > 80 && cpu <= 100)
       add(2, 'Comprobar si la carga de CPU se mantiene', `${cpu} % de carga${s.cpu[0].Samples > 1 ? ` media de ${s.cpu[0].Samples} muestras` : ' en una muestra'}. Revisa la tarea que está usando el procesador.`, 'Ver recursos', 'processes');
-    if (!errors.includes('startup') && s.startup?.length)
-      add(3, 'Revisar las aplicaciones de inicio', `${s.startup.length} entradas reportadas. El inventario puede incluir entradas deshabilitadas: confirma su estado en Windows y conserva seguridad y controladores.`, 'Revisar inicio', 'startup');
+    // Startup inventory alone is not evidence of a problem: Windows also lists disabled items.
+    // Keep the inventory accessible in its dedicated tab, without a default warning.
     if (!errors.includes('configuration')) {
       const balanced = '381b4222-f694-41f0-9685-ff5bb260df2e';
       const saver = 'a1841308-3541-4fab-bc81-f71556f20b4a';
       const state = s.configuration;
       if (!errors.includes('plans') && s.onBattery === false && state?.values?.power === saver && state.plans?.some(p => p.id === balanced))
         list.push({ priority: 3, title: 'Opcional: usar el plan Equilibrado', evidence: 'El equipo está conectado a la corriente y tiene activo el plan Economizador. Puedes cambiar a Equilibrado; puede aumentar el consumo respecto al ahorro. No garantiza una mejora y conservarás la opción de restaurar el plan anterior.', action: 'Revisar cambio de energía', view: 'recommendations', changes: { power: balanced } });
-      const changes = Object.fromEntries(['animations','menuAnimation','comboAnimation'].filter(key => s.configuration?.values?.[key] === true).map(key => [key,false]));
-      if (Object.keys(changes).length) list.push({ priority: 3, title: 'Opcional: una interfaz con menos transiciones', evidence: 'Windows tiene animaciones activadas. Puedes reducirlas para que los controles compatibles se muestren directamente. No libera RAM ni garantiza más FPS.', action: 'Revisar aplicación automática', view: 'recommendations', changes });
+      // Animation preferences are user choices, not performance diagnoses.
+      // They remain available under Optimizar but no longer masquerade as scan findings.
     }
     return list.sort((a, b) => a.priority - b.priority);
   }
