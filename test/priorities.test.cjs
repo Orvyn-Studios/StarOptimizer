@@ -84,3 +84,32 @@ test('memory pressure includes measured responsible process, not a guessed app',
   s.errors = ['processes'];
   assert.equal(priorities(s).some(x => x.evidence.includes('Browser')), false);
 });
+
+test('partial configuration only suppresses the unavailable optional settings', () => {
+  const s = normal();
+  const high = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c';
+  s.onBattery = false; s.errors = ['configuration'];
+  s.configuration = {
+    values: { power: balanced, animations: null, menuAnimation: true, comboAnimation: false },
+    plans: [{ id: balanced }, { id: high }], unavailable: ['animations']
+  };
+  assert.equal(priorities(s).length, 1, 'Intelligent only reports the missing reading');
+  assert.deepEqual(priorities(s, 'gaming').filter(x => x.changes).map(x => x.changes), [{ power: high }]);
+  assert.deepEqual(priorities(s, 'extreme').filter(x => x.changes).map(x => x.changes), [{ power: high }, { menuAnimation: false }]);
+  s.configuration.unavailable = ['power']; s.configuration.values.power = null;
+  assert.deepEqual(priorities(s, 'gaming').filter(x => x.changes), []);
+  assert.deepEqual(priorities(s, 'extreme').filter(x => x.changes).map(x => x.changes), [{ menuAnimation: false }]);
+  delete s.configuration.unavailable;
+  assert.deepEqual(priorities(s, 'extreme').filter(x => x.changes), [], 'legacy generic error has no precise availability evidence');
+});
+
+test('optional modes require a listed current plan and known AC power', () => {
+  const s = normal(); const high = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c';
+  s.configuration = { values: { power: balanced }, plans: [{ id: high }] };
+  s.onBattery = false;
+  assert.deepEqual(priorities(s, 'gaming'), [], 'missing original plan cannot offer a reversible change');
+  s.configuration.plans.push({ id: balanced }); s.onBattery = null;
+  assert.deepEqual(priorities(s, 'gaming'), []);
+  s.onBattery = false; s.errors = ['plans'];
+  assert.equal(priorities(s, 'gaming').some(x => x.changes), false);
+});

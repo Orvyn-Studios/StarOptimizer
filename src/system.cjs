@@ -50,7 +50,8 @@ async function optimizationState() {
   const results = await Promise.allSettled([plans(), visualState()]);
   const available = results[0].status === 'fulfilled' ? results[0].value : [];
   const visual = results[1].status === 'fulfilled' ? results[1].value : {};
-  return { plans: available, values: { power: available.find(x => x.active)?.id || null, animations: visual.animations ?? null, menuAnimation: visual.menuAnimation ?? null, comboAnimation: visual.comboAnimation ?? null } };
+  const values = { power: available.find(x => x.active)?.id || null, animations: visual.animations ?? null, menuAnimation: visual.menuAnimation ?? null, comboAnimation: visual.comboAnimation ?? null };
+  return { plans: available, values, unavailable: Object.keys(values).filter(key => values[key] === null) };
 }
 const optimizationAdapter = {
   snapshot: optimizationState,

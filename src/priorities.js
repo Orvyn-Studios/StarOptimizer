@@ -34,16 +34,21 @@
     // Explicit user-selected goals are preferences, never fabricated scan findings.
     // All changes still use the existing preview / apply / rollback engine.
     const power = s.configuration?.values?.power;
+    // A failed visual API must not hide readable energy options, or vice versa.
+    // Older snapshots with only a generic configuration error stay conservative.
+    const readable = key => !errors.includes('configuration') ||
+      Array.isArray(s.configuration?.unavailable) && !s.configuration.unavailable.includes(key);
     const high = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c';
     const isAc = s.onBattery === false;
     const highAvailable = s.configuration?.plans?.some(p => p.id === high);
+    const currentAvailable = s.configuration?.plans?.some(p => p.id === power);
     const modeName = mode === 'gaming' ? 'Gaming' : 'Extremo';
-    if (mode !== 'intelligent' && isAc && !errors.includes('plans') && !errors.includes('configuration') && highAvailable && power && power !== high) {
+    if (mode !== 'intelligent' && isAc && !errors.includes('plans') && readable('power') && highAvailable && currentAvailable && power !== high) {
       list.push({ priority: 3, title: `Opcional (${modeName}): plan Alto rendimiento`, evidence: 'El equipo está conectado a corriente y Windows dispone de Alto rendimiento. No garantiza más FPS; puede aumentar temperatura, ruido y consumo. Se aplicará solo tras confirmación.', action: 'Revisar plan de energía', view: 'recommendations', changes: { power: high } });
     }
-    if (mode === 'extreme' && !errors.includes('configuration')) {
+    if (mode === 'extreme') {
       const changes = Object.fromEntries(['animations', 'menuAnimation', 'comboAnimation']
-        .filter(key => s.configuration?.values?.[key] === true).map(key => [key, false]));
+        .filter(key => readable(key) && s.configuration?.values?.[key] === true).map(key => [key, false]));
       if (Object.keys(changes).length) list.push({ priority: 3, title: 'Opcional (Extremo): reducir efectos de Windows', evidence: 'Es una preferencia del modo Extremo, no una avería detectada. Puede hacer que los menús parezcan más inmediatos; no aumenta necesariamente los FPS ni libera RAM.', action: 'Revisar efectos visuales', view: 'recommendations', changes });
     }
     return list.sort((a, b) => a.priority - b.priority);
