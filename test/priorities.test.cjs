@@ -70,3 +70,17 @@ test('extreme opt-in separates optional visual adjustments from actual diagnoses
   assert.deepEqual(items[0].changes, { animations: false, comboAnimation: false });
   assert.match(items[0].evidence, /no una avería/);
 });
+
+test('large drive with plenty of free GB does not create false low-space warnings', () => {
+  const s = normal(); s.disks = [{ DeviceID: 'D:', Size: 4 * 1024 ** 4, FreeSpace: 200 * 1024 ** 3 }];
+  assert.deepEqual(priorities(s), []);
+  s.disks[0].FreeSpace = 10 * 1024 ** 3;
+  assert.match(priorities(s)[0].title, /espacio/);
+});
+test('memory pressure includes measured responsible process, not a guessed app', () => {
+  const s = normal(); s.memory = { total: 16 * 1024 ** 3, free: 1 * 1024 ** 3 };
+  s.processes = [{ ProcessName: 'Browser', WorkingSet64: 3 * 1024 ** 3 }, { ProcessName: 'Editor', WorkingSet64: 0.5 * 1024 ** 3 }];
+  assert.match(priorities(s)[0].evidence, /Browser/);
+  s.errors = ['processes'];
+  assert.equal(priorities(s).some(x => x.evidence.includes('Browser')), false);
+});
