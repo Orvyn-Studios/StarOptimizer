@@ -1,5 +1,15 @@
 const $ = id => document.getElementById(id);
 const api = window.star;
+const OPT_MODES = Object.freeze({
+  intelligent: { label: 'Inteligente', detail: 'Solo problemas respaldados por lecturas del sistema.' },
+  gaming: { label: 'Gaming', detail: 'Máximo rendimiento práctico sin eliminar efectos visuales.' },
+  extreme: { label: 'Extremo', detail: 'Incluye ajustes visuales opcionales, todos reversibles.' }
+});
+let optimizationMode = 'intelligent';
+try {
+  const storedMode = localStorage.getItem('staroptimizer:optimization-mode');
+  if (Object.hasOwn(OPT_MODES, storedMode)) optimizationMode = storedMode;
+} catch { /* Persisted preferences are optional. */ }
 const nova = window.createNova();
 const novaSpace = $('nova-space');
 const novaHome = document.createElement('div');
@@ -218,7 +228,7 @@ function render() {
   let signals = 0;
   if ((s.memory.total - s.memory.free) / s.memory.total > .85) { signals++; insights.append(row('La memoria está bastante ocupada', 'Más del 85 % en esta lectura. Revisa las apps con mayor consumo y guarda tu trabajo antes de cerrar las que no necesites.', button('Ver recursos', () => show('processes')))); }
   if (cpu !== null && cpu > 80) { signals++; insights.append(row('La CPU está trabajando mucho', 'Más del 80 % en esta muestra. Repite el análisis cuando terminen las tareas actuales; un pico aislado es normal.')); }
-  s.disks.filter(d => d.Size > 0 && d.FreeSpace / d.Size < .15).forEach(d => { signals++; insights.append(row(`Poco espacio en ${d.DeviceID}`, 'Menos del 15 % libre. Considera mover archivos que conozcas a otra unidad. StarOptimizer no los borra.', button('Ver unidades', () => show('processes')))); });
+  s.disks.filter(d => d.Size > 0 && d.FreeSpace / d.Size < .15 && d.FreeSpace < 32 * 1024 ** 3).forEach(d => { signals++; insights.append(row(`Poco espacio en ${d.DeviceID}`, 'Menos del 15 % libre. Considera mover archivos que conozcas a otra unidad. StarOptimizer no los borra.', button('Ver unidades', () => show('processes')))); });
   if (!signals) insights.append(row('Sin presión alta en las lecturas disponibles', 'No se detectan los umbrales de uso alto de CPU, RAM o poco espacio en esta muestra. No es una prueba de salud del hardware.', node('span', 'Sin alertas')));
   if (s.startup.length) insights.append(row('Revisa lo que arranca contigo', `${s.startup.length} entradas en el inventario. Confirma cuáles están activadas en Windows antes de decidir.`, button('Revisar inicio', () => show('startup'))));
   const missing = { cpu: 'CPU', disks: 'discos', processes: 'procesos', startup: 'inicio', plans: 'energía', gpu: 'GPU', configuration: 'algunos ajustes de Windows' };
@@ -234,8 +244,52 @@ const scanExperience = window.createScanExperience({
   returnNova() { (view === 'overview' ? novaHome : novaDock).append(novaSpace); },
   navigate: show
 });
+// Keep the optimization goal explicit. The scan itself never changes Windows.
+const modePicker = document.createElement('label');
+modePicker.className = 'mode-selector';
+
+const modeLabel = document.createElement('strong');
+modeLabel.textContent = 'Objetivo';
+const modeSelect = document.createElement('select');
+modeSelect.id = 'optimization-mode';
+modeSelect.setAttribute('aria-label', 'Objetivo de optimización');
+for (const [value, cfg] of Object.entries(OPT_MODES)) {
+  const option = document.createElement('option'); option.value = value; option.textContent = cfg.label; modeSelect.append(option);
+}
+const modeHint = document.createElement('span');
+modeHint.className = 'mode-hint';
+modeHint.textContent = OPT_MODES[optimizationMode].detail;
+modeSelect.value = optimizationMode;
+modePicker.append(modeLabel, modeSelect, modeHint);
+document.getElementById('priority-date').before(modePicker);
+modeSelect.addEventListener('change', () => {
+  optimizationMode = Object.hasOwn(OPT_MODES, modeSelect.value) ? modeSelect.value : 'intelligent';
+  modeHint.textContent = OPT_MODES[optimizationMode].detail;
+  try { localStorage.setItem('staroptimizer:optimization-mode', optimizationMode); } catch { /* Preferences remain in memory. */ }
+  if (snapshot) renderPriorities();
+});
+const scanEvidence = document.createElement('p');
+scanEvidence.id = 'scan-evidence';
+scanEvidence.className = 'micro';
+scanEvidence.setAttribute('aria-live', 'polite');
+modePicker.after(scanEvidence);
 function renderPriorities() {
-  const items = window.starPriorities(snapshot);
+  const items = window.starPriorities(snapshot, optimizationMode);
+  // Every displayed metric comes from the actual Windows snapshot, never a generic demo.
+  const facts = [];
+  const unavailable = snapshot.errors || [];
+  const cpuReading = snapshot.cpu?.[0];
+  if (!unavailable.includes('cpu') && Number.isFinite(cpuReading?.LoadPercentage))
+    facts.push(`CPU: ${cpuReading.LoadPercentage}%${cpuReading.Samples > 1 ? ` (${cpuReading.Samples} muestras)` : ''}`);
+  const ram = snapshot.memory;
+  if (!unavailable.includes('memory') && Number.isFinite(ram?.total) && ram.total > 0 && Number.isFinite(ram.free) && ram.free >= 0 && ram.free <= ram.total)
+    facts.push(`RAM: ${Math.round((ram.total - ram.free) / ram.total * 100)}% utilizada`);
+  if (!unavailable.includes('disks') && Array.isArray(snapshot.disks))
+    facts.push(`Unidades: ${snapshot.disks.length}`);
+  if (!unavailable.includes('gpu') && snapshot.gpu?.[0]?.Name)
+    facts.push(`GPU: ${snapshot.gpu[0].Name}`);
+  scanEvidence.textContent = facts.length ? `Lecturas del equipo: ${facts.join(' · ')}.` : 'Sin métricas válidas disponibles en esta lectura.';
+  if (unavailable.length) scanEvidence.textContent += ` Lecturas incompletas: ${unavailable.join(', ')}.`;
   const nav = document.querySelector('[data-view="recommended"]');
   nav.disabled = !snapshot; nav.title = snapshot ? 'Ver las prioridades del último análisis' : 'Analiza tu equipo primero';
   $('priority-date').textContent = `Inventario: ${new Date(snapshot.at).toLocaleTimeString('es-ES')}${snapshot.errors.length ? ' · datos parciales' : ''}. CPU/RAM: ${new Date(snapshot.liveAt || snapshot.at).toLocaleTimeString('es-ES')}.`;
@@ -244,7 +298,7 @@ function renderPriorities() {
   const automatic = Object.assign({}, ...items.filter(item => item.changes).map(item => item.changes));
   const available = Object.fromEntries(Object.entries(automatic).filter(([key]) => !isLocked(key)));
   if (Object.keys(available).length) {
-    const batch = button(`Revisar ${Object.keys(available).length} ajustes automáticos`, async () => {
+    const batch = button(`Revisar ${Object.keys(available).length} ajustes opcionales`, async () => {
       draft = available; clearProfile(); renderConfiguration(); await review();
     });
     batch.id = 'review-recommended'; list.before(batch);
@@ -252,7 +306,7 @@ function renderPriorities() {
   for (const item of items) {
     const li = node('li', undefined, 'priority-item');
     const body = node('div');
-    body.append(node('span', ['Lecturas pendientes', 'Prioridad alta', 'Comprobar carga', 'Revisión opcional'][item.priority], 'tag'), node('h3', item.title), node('p', item.evidence));
+    body.append(node('span', item.badge || ['Lecturas pendientes', 'Prioridad alta', 'Comprobar carga', 'Revisión opcional'][item.priority], 'tag'), node('h3', item.title), node('p', item.evidence));
     if (item.changes) {
       const eligible = Object.fromEntries(Object.entries(item.changes).filter(([key]) => !isLocked(key)));
       const apply = button(Object.keys(eligible).length ? item.action : 'Cambio ya registrado · ver historial', async () => {

@@ -7,11 +7,12 @@ window.createNova = function createNova() {
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
   const BLINK_INTERVAL = 10000;
   let visible = true, simple = false, destroyed = false;
-  let timer, lookTimer, frame, deadline = 0, target = { x: 0, y: 0 };
+  let timer, lookTimer, frame, reactionTimer, deadline = 0, target = { x: 0, y: 0 };
+  let busy = false;
   let pointerUntil = 0, lastLook = -1;
   let blinkIndex = 0;
   const animations = new Set();
-  const allowed = () => visible && !document.hidden && !simple && !reduce.matches && !destroyed;
+  const allowed = () => visible && !document.hidden && document.visibilityState === 'visible' && !simple && !reduce.matches && !destroyed;
 
   function blink() {
     if (!allowed()) return;
@@ -50,13 +51,19 @@ window.createNova = function createNova() {
     }, Math.max(0, deadline - performance.now()));
   }
   function gaze(x, y, motion = {}) {
-    target = { x, y };
+    target = { x, y, motion };
     if (!allowed() || frame) return;
     frame = requestAnimationFrame(() => {
       frame = null;
       if (!allowed()) return;
-      button.style.setProperty('--gaze-duration', `${motion.duration ?? 760}ms`);
-      button.style.setProperty('--gaze-easing', motion.easing ?? 'cubic-bezier(.16,1,.3,1)');
+      // Resolve the latest pointer position once per frame, before any style writes.
+      if (target.motion.fromPointer) {
+        const rect = button.getBoundingClientRect();
+        target.x = Math.max(-16, Math.min(16, (target.x - rect.left - rect.width / 2) / 18));
+        target.y = Math.max(-10, Math.min(10, (target.y - rect.top - rect.height / 2) / 22));
+      }
+      button.style.setProperty('--gaze-duration', `${target.motion.duration ?? 760}ms`);
+      button.style.setProperty('--gaze-easing', target.motion.easing ?? 'cubic-bezier(.16,1,.3,1)');
       button.style.setProperty('--gaze-x', `${target.x}px`);
       button.style.setProperty('--gaze-y', `${target.y}px`);
       const strength = Math.max(0, Math.hypot(target.x, target.y) - 5) / 14;
@@ -90,16 +97,13 @@ window.createNova = function createNova() {
   }
   function pointerMove(event) {
     if (!allowed()) return;
-    const rect = button.getBoundingClientRect();
-    const x = event.clientX - rect.left - rect.width / 2;
-    const y = event.clientY - rect.top - rect.height / 2;
     pointerUntil = performance.now() + 3600;
-    gaze(Math.max(-16, Math.min(16, x / 18)), Math.max(-10, Math.min(10, y / 22)), { duration: 620 });
+    gaze(event.clientX, event.clientY, { duration: 620, fromPointer: true });
     scheduleLook(3600);
   }
   function center() { pointerUntil = 0; gaze(0, 0, { duration: 880 }); scheduleLook(2100); }
   function stop() {
-    clearTimeout(timer); clearTimeout(lookTimer); cancelAnimationFrame(frame); frame = null;
+    clearTimeout(timer); clearTimeout(lookTimer); clearTimeout(reactionTimer); cancelAnimationFrame(frame); frame = null;
     for (const animation of animations) animation.cancel();
     animations.clear();
     button.style.setProperty('--gaze-x', '0px'); button.style.setProperty('--gaze-y', '0px');
@@ -108,6 +112,7 @@ window.createNova = function createNova() {
   function refresh() {
     stop();
     space.classList.toggle('nova-still', !allowed());
+    space.dataset.novaState = allowed() && busy ? 'working' : 'idle';
     if (allowed()) {
       deadline = performance.now() + BLINK_INTERVAL;
       schedule();
@@ -128,8 +133,20 @@ window.createNova = function createNova() {
         visible = nextVisible; simple = nextSimple; refresh();
       }
     },
-    working() {},
-    react() {},
+    working(nextBusy = false) {
+      if (destroyed) return;
+      busy = Boolean(nextBusy);
+      clearTimeout(reactionTimer);
+      space.dataset.novaState = allowed() && busy ? 'working' : 'idle';
+    },
+    react(kind) {
+      if (!allowed() || busy || !['success', 'error', 'restore'].includes(kind)) return;
+      clearTimeout(reactionTimer);
+      space.dataset.novaState = kind;
+      reactionTimer = setTimeout(() => {
+        if (!destroyed) space.dataset.novaState = allowed() && busy ? 'working' : 'idle';
+      }, 1400);
+    },
     destroy() {
       destroyed = true; stop();
       document.removeEventListener('pointermove', pointerMove);

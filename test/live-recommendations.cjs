@@ -14,12 +14,15 @@ const assert = require('node:assert/strict'); const path = require('node:path');
   });
   await page.evaluate(()=>analyze()); await page.bringToFront(); await page.click('[data-view="recommended"]');
   assert.match(await page.textContent('#priority-list'),/memoria/);
+  assert.match(await page.textContent('#scan-evidence'),/RAM: 95% utilizada/);
   await app.evaluate(()=>{global.liveFixture.free=70;});
   await page.waitForFunction(()=>!document.querySelector('#priority-list').textContent.includes('aplicaciones que ocupan memoria'),null,{timeout:15000}).catch(async error => {
     console.error(await page.evaluate(()=>({hidden:document.hidden,status:document.querySelector('#recommendation-live-status').textContent})),errors);
     throw error;
   });
-  await page.getByRole('button',{name:'Revisar aplicación automática',exact:true}).click();
+  assert.equal(await page.getByRole('button',{name:'Revisar aplicación automática',exact:true}).count(),0,'intelligent must not flag enabled animations');
+  await page.selectOption('#optimization-mode','extreme');
+  await page.getByRole('button',{name:'Revisar efectos visuales',exact:true}).click();
   await page.waitForSelector('#review-dialog[open]');
   assert.equal(await app.evaluate(()=>global.liveFixture.previews),1);
   assert.equal(await app.evaluate(()=>global.liveFixture.enabled),true,'preview cannot modify Windows');

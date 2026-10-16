@@ -1,6 +1,6 @@
 {
   "name": "staroptimizer",
-  "version": "0.6.1",
+  "version": "2.0.0-beta.1",
   "description": "Diagnóstico local y ajustes reversibles para Windows",
   "main": "src/main.cjs",
   "scripts": {
@@ -12,12 +12,16 @@
     "test:scan": "node test/scan-flow.cjs",
     "test:measure": "node test/measure-ui.cjs",
     "test:live": "node test/live-recommendations.cjs",
-    "dist": "electron-builder --win portable --x64"
+    "dist": "electron-builder --win portable --x64",
+    "test:windows:smoke": "node scripts/verify-windows.cjs"
   },
   "keywords": [],
   "author": "StarOptimizer",
   "license": "UNLICENSED",
   "type": "commonjs",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "electron": "^44.2.0",

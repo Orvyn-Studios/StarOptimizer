@@ -1,26 +1,31 @@
-# StarOptimizer
+# StarOptimizer 2.0 (beta de desarrollo)
 
-Aplicación de escritorio para Windows 10/11 x64. Versión 0.6.1: recomendaciones con actualización periódica y revisión conjunta de ajustes automáticos compatibles. Conserva diagnóstico local, perfiles, mediciones antes/después, búsquedas, exportación y ajustes reversibles. Beta sin firma digital. Consulta `GUIA-PUESTA-A-PUNTO.md` para utilizarla en otro equipo.
+> **Rama Orvyn 2.0:** No es una versión estable ni certificada en Windows. No distribuir ni fusionar hasta superar los controles en [docs/ORVYN_2_0.md](docs/ORVYN_2_0.md). La descarga de `releases/latest` sigue apuntando a la versión estable anterior.
+
+
+Aplicación de escritorio para Windows 10/11 x64. Versión 2.0.0-beta.1 (en pruebas): recomendaciones con actualización periódica y revisión conjunta de ajustes automáticos compatibles. Conserva diagnóstico local, perfiles, mediciones antes/después, búsquedas, exportación y ajustes reversibles. Beta sin firma digital. Consulta `GUIA-PUESTA-A-PUNTO.md` para utilizarla en otro equipo.
 
 ## Ejecutar
 
-**[Descargar el programa para Windows](https://github.com/SnoW-099/StarOptimizer/releases/latest)**. Descarga el ZIP, extrae la carpeta y abre el ejecutable. El repositorio es privado: inicia sesión con una cuenta con acceso. La descarga del código fuente no incluye el programa compilado; usa los archivos adjuntos de la versión.
+**[Versiones anteriores para Windows](https://github.com/SnoW-099/StarOptimizer/releases/latest)**. Ese enlace corresponde a la versión publicada anterior, no a esta beta 2.0. El repositorio es público; esta rama está en desarrollo y no acredita un ejecutable 2.0 validado. La descarga del código fuente no incluye un programa compilado.
 
-Descarga o genera `dist/StarOptimizer-0.6.1-portable.exe` y ábrelo. No necesita instalarse ni pide elevación. Windows puede mostrar una advertencia de editor desconocido porque el binario no está firmado. Algunas políticas de empresa pueden impedir leer o modificar ajustes; la app informa del error.
+La compilación portable de esta rama solo debe prepararse después de superar las pruebas. Windows puede mostrar una advertencia de editor desconocido si el binario no está firmado. Algunas políticas de empresa o del entorno de ejecución pueden impedir leer o modificar ajustes; la app informa del error.
 
-Para desarrollo, con Node.js y npm instalados:
+Para desarrollo, con Node.js **22.12.0 o posterior** y npm instalados:
 
 ```sh
 npm ci
 npm start
 ```
 
+En Windows PowerShell puedes usar `npm.cmd ci` y `npm.cmd start` si la política de scripts bloquea `npm.ps1`; no es necesario cambiar esa política. Los resultados reales y los bloqueos actuales están en [el informe de aceptación actualizado](docs/ACCEPTANCE_2026_10_16.md).
+
 ## Qué hace
 
-- Recomendados permite revisar todos los ajustes automáticos disponibles en un lote antes de confirmar. Si el PC está conectado a corriente, usa el plan Economizador conocido de Windows y tiene disponible Equilibrado, ofrece cambiar a este último. No modifica planes personalizados ni crea planes. El consumo puede aumentar; el cambio es opcional y reversible. Identificadores y comportamiento de referencia: [Microsoft Power Policy Settings](https://learn.microsoft.com/en-us/windows/win32/power/power-policy-settings).
+- Recomendados distingue tres objetivos: **Inteligente** muestra problemas respaldados por lecturas y datos no disponibles; **Gaming** añade la opción de Alto rendimiento si existe, el plan original sigue disponible y consta conexión a corriente; **Extremo** añade reducciones visuales opcionales y reversibles. Los ajustes opcionales se revisan antes de confirmar. No crea planes ni modifica sus valores internos. Identificadores de referencia: [Microsoft Power Policy Settings](https://learn.microsoft.com/en-us/windows/win32/power/power-policy-settings).
 
 - El análisis completo toma ocho muestras de CPU y comunica su media. En Recomendados, CPU/RAM se consultan cada cinco segundos mientras la sección está visible, con una media móvil de tres a seis muestras para CPU; el inventario completo se renueva cada minuto. Las recomendaciones se recalculan. Puedes pausar el directo; también se pausa durante mediciones, operaciones y revisión de cambios. Cada dato conserva su fecha si una actualización falla.
-- Cuando hay animaciones de Windows activadas, ofrece una reducción opcional con revisión y aplicación automática del lote compatible. Usa el motor existente, con verificación y restauración: no ejecuta texto arbitrario en CMD, no cierra aplicaciones y no borra archivos. Las recomendaciones de inicio, memoria, almacenamiento y hardware siguen requiriendo una decisión manual; no se presentan como reparaciones automáticas.
+- Las animaciones activadas no son un fallo. Su reducción opcional aparece en Extremo; los ajustes manuales también permanecen en Optimizar. Cada cambio usa revisión, confirmación, verificación e historial de restauración: no ejecuta texto arbitrario en CMD, no cierra aplicaciones y no borra archivos. Los avisos de memoria, almacenamiento y hardware requieren una decisión manual; no se presentan como reparaciones automáticas.
 
 - Puesta a punto guía análisis, medición inicial, inicio, perfiles, controles de Windows y comparación final. Las mediciones toman doce muestras y guardan media/pico de CPU y RAM media en `%APPDATA%/StarOptimizer/measurements.json`, conservando las lecturas anteriores. No mide FPS ni declara ganancias de velocidad. El backend impide aplicar cambios durante la medición.
 - Consulta `Get-PhysicalDisk` para mostrar nombre, tipo y estados de salud/operativo, sin números de serie. Si falla o no hay datos, indica no disponible. Un aviso reportado se prioriza antes de ajustes de rendimiento. Esto no sustituye pruebas de salud ni sensores de temperatura.
@@ -28,11 +33,11 @@ npm start
 Referencia técnica: [Get-PhysicalDisk, Microsoft Learn](https://learn.microsoft.com/en-us/powershell/module/storage/get-physicaldisk). El estado procede del proveedor de almacenamiento de Windows y no equivale a una prueba exhaustiva del dispositivo.
 
 - Al pulsar Analizar, Nova piensa y lee mientras Windows reúne datos. La bombilla aparece tras recibir los resultados; el resumen distingue análisis completo, parcial y fallo. No se simula un porcentaje de avance. Puedes continuar en segundo plano.
-- Recomendados permanece bloqueado hasta recibir un análisis. Ordena lecturas pendientes, presión de almacenamiento/memoria, CPU y revisión opcional de inicio. Cada punto muestra evidencia y una acción; no supone que todas las entradas de inicio estén activadas. Los datos ausentes no se convierten en diagnósticos. La sección se desbloquea de nuevo tras analizar en cada sesión.
+- Recomendados permanece bloqueado hasta recibir un análisis. Ordena avisos físicos de discos, lecturas pendientes, presión de almacenamiento/memoria, CPU y opciones del modo elegido. Cada punto muestra evidencia y una acción. El inventario de inicio no se considera por sí solo un problema. Los datos ausentes no se convierten en diagnósticos. La sección se desbloquea de nuevo tras analizar en cada sesión.
 
 - Consulta CPU, RAM, discos locales, GPU/controlador, hasta 30 grupos de procesos por consumo de memoria y entradas de inicio, con búsquedas.
 - Ofrece un monitor opcional de CPU/RAM cada cinco segundos. Se pausa fuera de Inicio, al ocultar la app y durante operaciones. El resto de los datos conserva la fecha del análisis completo.
-- Señala CPU por encima del 80 %, RAM por encima del 85 % y unidades con menos del 15 % libre como señales para revisar, sin confundirlas con fallos de hardware.
+- Señala CPU por encima del 80 %, RAM por encima del 85 % y unidades con menos del 15 % **y** menos de 32 GiB libres como señales para revisar, sin confundirlas con fallos de hardware.
 - Prepara perfiles Equilibrado, Más directo y Rendimiento. Los perfiles solo seleccionan opciones: nunca se aplican automáticamente.
 - Cambia a un plan de energía existente y/o reduce animaciones de interfaz, menús y listas mediante la API documentada `SystemParametersInfoW`. Sus efectos dependen de que cada aplicación respete esos ajustes.
 - Muestra una revisión exacta de valores actuales y nuevos. La revisión caduca a los cinco minutos y se invalida si Windows cambia entre medias.
@@ -62,7 +67,7 @@ npm run test:live
 npm run dist
 ```
 
-Las 32 pruebas unitarias cubren optimización, prioridades y persistencia de mediciones, incluidos datos ausentes, muestreo fallido e historial corrupto. Las mutaciones usan adaptadores aislados y directorios temporales. `test:scan` verifica bloqueo inicial, error, fases visuales y resumen parcial; `test:measure` comprueba mediciones reales, exclusión de operaciones y recuperación de la lectura inicial tras reiniciar con un perfil de datos aislado.
+Las pruebas unitarias cubren optimización, prioridades, persistencia de mediciones, ejecución de comandos y el controlador de Nova, incluidos datos ausentes, muestreo fallido e historial corrupto. Las mutaciones usan adaptadores aislados y directorios temporales. Las pruebas instrumentadas del controlador no acreditan renderizado real ni compatibilidad de Windows. `test:scan` verifica bloqueo inicial, error, fases visuales y resumen parcial; `test:measure` comprueba mediciones reales, exclusión de operaciones y recuperación de la lectura inicial tras reiniciar con un perfil de datos aislado. Consulta el informe de validación para distinguir pruebas aprobadas de pruebas bloqueadas.
 
 `test:ui` ejecuta un diagnóstico real y lee las opciones nativas, prueba navegación, revisión/cancelación, búsqueda, apariencia, movimiento reducido y una ventana compacta. No aplica ajustes al anfitrión. `test:workflow` prueba desde los botones el ciclo revisión → aplicación → restauración y la recuperación automática de un lote fallido, con el motor real y un adaptador simulado dentro del proceso de prueba. La app distribuida no expone un modo de prueba. Ambas pruebas admiten un ejecutable empaquetado: `node test/ui.cjs dist/win-unpacked/StarOptimizer.exe` y `node test/workflow.cjs dist/win-unpacked/StarOptimizer.exe`.
 

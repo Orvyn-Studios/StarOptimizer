@@ -44,3 +44,21 @@
 @media (prefers-reduced-motion: reduce) {
   #nova-space * { animation: none !important; transition: none !important; }
 }
+
+/* Nova reports real scan/operation states. Reactions do not imply artificial AI. */
+#nova-space[data-nova-state="working"]:not(.nova-still) .eye {
+  filter: saturate(1.15) brightness(1.08);
+}
+#nova-space[data-nova-state="success"]:not(.nova-still) .eye,
+#nova-space[data-nova-state="restore"]:not(.nova-still) .eye {
+  filter: hue-rotate(38deg) saturate(1.18) brightness(1.08);
+}
+#nova-space[data-nova-state="error"]:not(.nova-still) .eye {
+  filter: hue-rotate(135deg) saturate(.8);
+}
+#nova-space[data-nova-state]:not([data-nova-state="idle"]) .eye {
+  transition: filter 220ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  #nova-space[data-nova-state] .eye { transition: none !important; }
+}

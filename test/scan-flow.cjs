@@ -34,7 +34,7 @@ const path = require('node:path');
     assert.match(await page.textContent('#scan-title'), /pendientes/);
     await page.click('#scan-results');
     assert.equal(await page.locator('#recommended').isVisible(), true);
-    assert.equal(await page.locator('.priority-item').count(), 5);
+    assert.equal(await page.locator('.priority-item').count(), 4);
     await page.screenshot({ path: 'artifacts/priorities.png', animations: 'disabled' });
     await page.click('[data-view="overview"]'); await page.click('#scan');
     await page.click('#scan-return'); await finish();

@@ -1,17 +1,9 @@
 const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs/promises');
-const { execFile } = require('node:child_process');
+const { ps, power } = require('./windows-command.cjs');
+const { readDisks } = require('./disks.cjs');
 const GUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
-const win = process.env.SystemRoot || 'C:\\Windows';
-function execute(file, args) {
-  return new Promise((resolve, reject) => execFile(file, args, { windowsHide: true, timeout: 30000, maxBuffer: 4 * 1024 * 1024, encoding: 'utf8' }, (error, stdout) => error ? reject(new Error('Windows no pudo completar la operación. Puede que esté restringida por permisos o por tu equipo.')) : resolve(stdout.trim())));
-}
-async function ps(script) {
-  const prefix = '[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); $ErrorActionPreference = "Stop"; ';
-  return JSON.parse(await execute(path.join(win, 'System32/WindowsPowerShell/v1.0/powershell.exe'), ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(prefix + script, 'utf16le').toString('base64')]));
-}
-async function power(args) { return execute(path.join(win, 'System32/powercfg.exe'), args); }
 async function plans() {
   const output = await power(['/list']);
   return output.split(/\r?\n/).flatMap(line => {
@@ -59,7 +51,8 @@ async function optimizationState() {
   const results = await Promise.allSettled([plans(), visualState()]);
   const available = results[0].status === 'fulfilled' ? results[0].value : [];
   const visual = results[1].status === 'fulfilled' ? results[1].value : {};
-  return { plans: available, values: { power: available.find(x => x.active)?.id || null, animations: visual.animations ?? null, menuAnimation: visual.menuAnimation ?? null, comboAnimation: visual.comboAnimation ?? null } };
+  const values = { power: available.find(x => x.active)?.id || null, animations: visual.animations ?? null, menuAnimation: visual.menuAnimation ?? null, comboAnimation: visual.comboAnimation ?? null };
+  return { plans: available, values, unavailable: Object.keys(values).filter(key => values[key] === null) };
 }
 const optimizationAdapter = {
   snapshot: optimizationState,
@@ -75,6 +68,7 @@ async function telemetry() {
   return { at: new Date().toISOString(), cpu: cpu[0].LoadPercentage, memory: { total: os.totalmem(), free: os.freemem() } };
 }
 async function scan() {
+  let diskSource = null;
   const sampledCpu = async () => {
     const readings = [];
     for (let i=0;i<8;i++) readings.push((await cpuSample())[0]);
@@ -83,7 +77,7 @@ async function scan() {
   };
   const sections = await Promise.allSettled([
     sampledCpu(),
-    ps('Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID,Size,FreeSpace | ConvertTo-Json -Compress'),
+    readDisks(ps).then(reading => { diskSource = reading.source; return reading.disks; }),
     ps('Get-Process | Group-Object ProcessName | ForEach-Object { [PSCustomObject]@{ ProcessName = $_.Name; Count = $_.Count; WorkingSet64 = ($_.Group | Measure-Object WorkingSet64 -Sum).Sum } } | Sort-Object WorkingSet64 -Descending | Select-Object -First 30 | ConvertTo-Json -Compress'),
     ps('Get-CimInstance Win32_StartupCommand | Select-Object Name,Location | ConvertTo-Json -Compress'),
     plans(),
@@ -91,10 +85,13 @@ async function scan() {
     ps('Get-PhysicalDisk | ForEach-Object { [PSCustomObject]@{ Name = $_.FriendlyName; MediaType = [string]$_.MediaType; HealthStatus = [string]$_.HealthStatus; OperationalStatus = ($_.OperationalStatus -join ", "); Size = $_.Size } } | ConvertTo-Json -Compress')
   ]);
   const names = ['cpu', 'disks', 'processes', 'startup', 'plans', 'gpu', 'physicalDisks'];
-  const result = { at: new Date().toISOString(), platform: `Windows ${os.release()}`, memory: { total: os.totalmem(), free: os.freemem() }, uptime: os.uptime(), errors: [] };
+  const result = { at: new Date().toISOString(), platform: `Windows ${os.release()}`, memory: { total: os.totalmem(), free: os.freemem() }, uptime: os.uptime(), errors: [], errorDetails: {}, sources: { disks: diskSource } };
   sections.forEach((section, i) => {
     if (section.status === 'fulfilled') result[names[i]] = [].concat(section.value || []);
-    else { result[names[i]] = []; result.errors.push(names[i]); }
+    else {
+      result[names[i]] = []; result.errors.push(names[i]);
+      result.errorDetails[names[i]] = section.reason?.diagnostic || { kind: 'unavailable', code: null };
+    }
   });
   return result;
 }

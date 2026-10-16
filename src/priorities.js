@@ -1,34 +1,55 @@
 /* Recommendations are observations from a completed snapshot, never assumed faults. */
 (function (root) {
-  function priorities(s) {
+  function priorities(s, mode = 'intelligent') {
+    if (!['intelligent', 'gaming', 'extreme'].includes(mode)) mode = 'intelligent';
     if (!s) return [];
     const list = [], errors = s.errors || [];
-    const add = (priority, title, evidence, action, view) => list.push({ priority, title, evidence, action, view });
+    const add = (priority, title, evidence, action, view, badge) => list.push({ priority, title, evidence, action, view, badge });
     const names = { cpu: 'CPU', memory: 'memoria', disks: 'almacenamiento', physicalDisks: 'estado físico de discos', processes: 'procesos', startup: 'inicio', plans: 'energía', gpu: 'GPU', configuration: 'ajustes de Windows' };
     if (!errors.includes('physicalDisks')) for (const disk of s.physicalDisks || []) {
-      if (['Warning','Unhealthy'].includes(disk.HealthStatus)) add(0, `Proteger los datos de ${disk.Name}`, `Windows reporta ${disk.HealthStatus}. Prioriza una copia de tus archivos importantes y revisar la unidad antes de buscar más rendimiento.`, 'Ver estado de discos', 'tuneup');
+      if (['Warning','Unhealthy'].includes(disk.HealthStatus)) add(0, `Proteger los datos de ${disk.Name}`, `Windows reporta ${disk.HealthStatus}. Prioriza una copia de tus archivos importantes y revisar la unidad antes de buscar más rendimiento.`, 'Ver estado de discos', 'tuneup', 'Aviso del disco');
     }
     if (errors.length) add(0, 'Completar las lecturas pendientes', `Windows no pudo consultar: ${errors.map(key => names[key] || key).join(', ')}. Las recomendaciones solo cubren los datos disponibles.`, 'Volver a analizar', 'scan');
     if (!errors.includes('disks')) for (const d of s.disks || []) {
-      if (Number.isFinite(d.Size) && d.Size > 0 && Number.isFinite(d.FreeSpace) && d.FreeSpace >= 0 && d.FreeSpace / d.Size < .15)
+      if (Number.isFinite(d.Size) && d.Size > 0 && Number.isFinite(d.FreeSpace) && d.FreeSpace >= 0 && d.FreeSpace / d.Size < .15 && d.FreeSpace < 32 * 1024 ** 3)
         add(1, `Revisar el espacio de ${d.DeviceID}`, `${Math.round(d.FreeSpace / d.Size * 100)} % libre en esta unidad. Considera mover archivos que reconozcas a otra unidad; no se borra nada automáticamente.`, 'Ver almacenamiento', 'processes');
     }
     const m = s.memory;
     if (!errors.includes('memory') && Number.isFinite(m?.total) && m.total > 0 && Number.isFinite(m.free) && m.free >= 0 && m.free <= m.total && (m.total - m.free) / m.total > .85)
-      add(1, 'Revisar las aplicaciones que ocupan memoria', `${Math.round((m.total - m.free) / m.total * 100)} % de RAM ocupada en esta lectura. Guarda tu trabajo antes de cerrar aplicaciones que no necesites.`, 'Ver recursos', 'processes');
+      add(1, 'Revisar las aplicaciones que ocupan memoria', (() => {
+        const top = !errors.includes('processes') && Array.isArray(s.processes)
+          ? s.processes.filter(x => Number.isFinite(x.WorkingSet64) && x.WorkingSet64 > 0 && typeof x.ProcessName === 'string')
+            .sort((a, b) => b.WorkingSet64 - a.WorkingSet64)[0] : null;
+        const detail = top && top.WorkingSet64 >= m.total * .12
+          ? ` El grupo ${top.ProcessName} tiene aprox. ${(top.WorkingSet64 / 1073741824).toFixed(1)} GB de memoria residente; revísalo antes de cerrar nada.` : '';
+        return `${Math.round((m.total - m.free) / m.total * 100)} % de RAM ocupada en esta lectura.${detail} Guarda tu trabajo antes de cerrar aplicaciones que no necesites.`;
+      })(), 'Ver recursos', 'processes');
     const cpu = s.cpu?.[0]?.LoadPercentage;
     if (!errors.includes('cpu') && Number.isFinite(cpu) && cpu > 80 && cpu <= 100)
       add(2, 'Comprobar si la carga de CPU se mantiene', `${cpu} % de carga${s.cpu[0].Samples > 1 ? ` media de ${s.cpu[0].Samples} muestras` : ' en una muestra'}. Revisa la tarea que está usando el procesador.`, 'Ver recursos', 'processes');
-    if (!errors.includes('startup') && s.startup?.length)
-      add(3, 'Revisar las aplicaciones de inicio', `${s.startup.length} entradas reportadas. El inventario puede incluir entradas deshabilitadas: confirma su estado en Windows y conserva seguridad y controladores.`, 'Revisar inicio', 'startup');
-    if (!errors.includes('configuration')) {
-      const balanced = '381b4222-f694-41f0-9685-ff5bb260df2e';
-      const saver = 'a1841308-3541-4fab-bc81-f71556f20b4a';
-      const state = s.configuration;
-      if (!errors.includes('plans') && s.onBattery === false && state?.values?.power === saver && state.plans?.some(p => p.id === balanced))
-        list.push({ priority: 3, title: 'Opcional: usar el plan Equilibrado', evidence: 'El equipo está conectado a la corriente y tiene activo el plan Economizador. Puedes cambiar a Equilibrado; puede aumentar el consumo respecto al ahorro. No garantiza una mejora y conservarás la opción de restaurar el plan anterior.', action: 'Revisar cambio de energía', view: 'recommendations', changes: { power: balanced } });
-      const changes = Object.fromEntries(['animations','menuAnimation','comboAnimation'].filter(key => s.configuration?.values?.[key] === true).map(key => [key,false]));
-      if (Object.keys(changes).length) list.push({ priority: 3, title: 'Opcional: una interfaz con menos transiciones', evidence: 'Windows tiene animaciones activadas. Puedes reducirlas para que los controles compatibles se muestren directamente. No libera RAM ni garantiza más FPS.', action: 'Revisar aplicación automática', view: 'recommendations', changes });
+    // Startup inventory alone is not evidence of a problem: Windows also lists disabled items.
+    // Keep the inventory accessible in its dedicated tab, without a default warning.
+    // Choosing Economizador or enabling animations is not itself a fault.
+    // Do not recommend changing intentional user preferences in Intelligent mode.
+    // Explicit user-selected goals are preferences, never fabricated scan findings.
+    // All changes still use the existing preview / apply / rollback engine.
+    const power = s.configuration?.values?.power;
+    // A failed visual API must not hide readable energy options, or vice versa.
+    // Older snapshots with only a generic configuration error stay conservative.
+    const readable = key => !errors.includes('configuration') ||
+      Array.isArray(s.configuration?.unavailable) && !s.configuration.unavailable.includes(key);
+    const high = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c';
+    const isAc = s.onBattery === false;
+    const highAvailable = s.configuration?.plans?.some(p => p.id === high);
+    const currentAvailable = s.configuration?.plans?.some(p => p.id === power);
+    const modeName = mode === 'gaming' ? 'Gaming' : 'Extremo';
+    if (mode !== 'intelligent' && isAc && !errors.includes('plans') && readable('power') && highAvailable && currentAvailable && power !== high) {
+      list.push({ priority: 3, title: `Opcional (${modeName}): plan Alto rendimiento`, evidence: 'El equipo está conectado a corriente y Windows dispone de Alto rendimiento. No garantiza más FPS; puede aumentar temperatura, ruido y consumo. Se aplicará solo tras confirmación.', action: 'Revisar plan de energía', view: 'recommendations', changes: { power: high } });
+    }
+    if (mode === 'extreme') {
+      const changes = Object.fromEntries(['animations', 'menuAnimation', 'comboAnimation']
+        .filter(key => readable(key) && s.configuration?.values?.[key] === true).map(key => [key, false]));
+      if (Object.keys(changes).length) list.push({ priority: 3, title: 'Opcional (Extremo): reducir efectos de Windows', evidence: 'Es una preferencia del modo Extremo, no una avería detectada. Puede hacer que los menús parezcan más inmediatos; no aumenta necesariamente los FPS ni libera RAM.', action: 'Revisar efectos visuales', view: 'recommendations', changes });
     }
     return list.sort((a, b) => a.priority - b.priority);
   }

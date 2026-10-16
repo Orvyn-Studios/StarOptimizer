@@ -8,6 +8,31 @@ test('summaries use all samples and reject missing or invalid readings', () => {
   assert.equal(summarize(values).cpuMean,35); assert.equal(summarize(values).cpuPeak,90);
   assert.throws(() => summarize([sample()])); values[1].cpu=null; assert.throws(() => summarize(values));
 });
+
+test('measurement rejects absent samples and changing total memory', () => {
+  const values = Array.from({ length: 12 }, sample);
+  values[3] = null;
+  assert.throws(() => summarize(values), /Medición incompleta/);
+  values[3] = sample(); values[7].memory.total = 200;
+  assert.throws(() => summarize(values), /Medición incompleta/);
+});
+
+test('numerically invalid persisted summaries fail closed without overwriting evidence', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'star-measure-'));
+  const manager = createMeasurements(dir, sample, context);
+  const [valid] = await manager.measure('before');
+  for (const invalid of [
+    { cpuMean: -1 }, { cpuMean: 101, cpuPeak: 101 }, { cpuPeak: 20 },
+    { memoryTotal: 0 }, { memoryUsedMean: -1 }, { memoryUsedMean: 101 },
+    { samples: 0 }, { samples: 5.5 }, { samples: null }
+  ]) {
+    const serialized = JSON.stringify([{ ...valid, summary: { ...valid.summary, ...invalid } }]);
+    await fs.writeFile(path.join(dir, 'measurements.json'), serialized);
+    await assert.rejects(manager.history(), /No se puede leer/);
+    await assert.rejects(manager.measure('before'), /No se puede leer/);
+    assert.equal(await fs.readFile(path.join(dir, 'measurements.json'), 'utf8'), serialized);
+  }
+});
 test('before/after measurements survive restart without replacing older baselines', async () => {
   const dir=await fs.mkdtemp(path.join(os.tmpdir(),'star-measure-'));
   const manager=createMeasurements(dir,sample,context);

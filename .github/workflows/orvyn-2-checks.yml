@@ -1,0 +1,56 @@
+name: Orvyn 2.0 verification
+
+on:
+  push:
+    branches:
+      - feature/orvyn-staroptimizer-2
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Unit tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # The unit tests use Node built-ins, avoiding unnecessary Electron downloads.
+      - run: npm test
+
+  windows-integration:
+    name: Windows desktop integration and portable build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Read-only operating-system scanner check
+        run: npm run test:windows:smoke
+      - name: Electron user interface
+        run: npm run test:ui
+      - name: Transaction and rollback workflow
+        run: npm run test:workflow
+      - name: Scan and results
+        run: npm run test:scan
+      - name: Live recommendations
+        run: npm run test:live
+      - name: Nova animation
+        run: npm run test:nova
+      - name: Measurements
+        run: npm run test:measure
+      - name: Verify portable Windows build without publishing
+        run: npm run dist

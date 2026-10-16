@@ -1,3 +1,5 @@
+> **Importante:** la rama Orvyn 2.0 es una beta de desarrollo. Esta guía sigue describiendo el ejecutable estable 0.6.1. No compartas un instalador 2.0 hasta completar las pruebas de Windows.
+
 # StarOptimizer 0.6.1 · Para llevar a otro PC
 
 Lleva `StarOptimizer-0.6.1-portable.exe`. No requiere instalación ni elevación. El código no necesita viajar con el ejecutable. El historial de ajustes y las mediciones se guardan en el perfil de Windows de ese PC, no junto al ejecutable.

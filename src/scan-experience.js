@@ -7,7 +7,7 @@ window.createScanExperience = function ({ takeNova, returnNova, navigate }) {
       <div class="thought-cloud" aria-hidden="true"><i></i><i></i><i></i></div>
       <div class="nova-book" aria-hidden="true"><span></span><span></span></div>
       <div class="nova-bulb" aria-hidden="true"><svg viewBox="0 0 64 80"><path d="M20 48C3 33 12 9 32 9s29 24 12 39l-3 9H23Z"/><path d="M24 65h16m-13 7h10M32 0v4M5 10l6 6M59 10l-6 6M0 34h7m50 0h7"/></svg></div>
-    </div><div aria-live="polite"><h2 id="scan-title">Un momento. Estoy pensando.</h2><p id="scan-description">Consultando los datos de tu equipo en Windows.</p></div>
+    </div><div aria-live="polite"><h2 id="scan-title">Preparando el análisis.</h2><p id="scan-description">Consultando los datos de tu equipo en Windows.</p></div>
     <div class="scan-pending"><span class="spinner"></span><span>Analizando · sin modificar tu PC</span></div>
     <div id="scan-summary" hidden></div><div class="scan-actions"><button class="button secondary" id="scan-return">Volver al equipo</button><button class="button primary" id="scan-results" hidden>Ver recomendaciones</button></div>
   </div>`;
@@ -33,7 +33,7 @@ window.createScanExperience = function ({ takeNova, returnNova, navigate }) {
       $('scan-summary').hidden = true; $('scan-results').hidden = true;
       dialog.querySelector('.scan-pending').hidden = false;
       $('scan-return').textContent = 'Seguir en segundo plano';
-      setStage('thinking', 'Un momento. Estoy pensando.', 'Consultando los datos de tu equipo en Windows.');
+      setStage('thinking', 'Preparando el análisis.', 'Consultando los datos de tu equipo en Windows.');
       dialog.showModal(); takeNova($('scan-nova-slot')); $('scan-return').focus();
       readingTimer = setTimeout(() => { if (running && dialog.open) setStage('reading', 'Leyendo tu equipo.', 'Windows sigue reuniendo la información. El tiempo depende del equipo.'); }, 1800);
     },
