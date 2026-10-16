@@ -14,28 +14,35 @@ test('power recommendation requires AC, known saver and an existing balanced pla
   s.configuration.plans.push({ id: balanced }); s.errors = ['plans'];
   assert.equal(priorities(s).some(p => p.changes?.power), false);
 });
-test('automatic visual actions include only confirmed active settings', () => {
-  const s = normal(); s.configuration = { values: { animations: true, menuAnimation: false, comboAnimation: null } };
-  assert.deepEqual(priorities(s)[0].changes, { animations: false });
-  s.configuration.values.animations = false; assert.deepEqual(priorities(s), []);
-  s.configuration.values.animations = true; s.errors = ['configuration'];
-  assert.equal(priorities(s).some(p => p.changes), false);
+test('enabled visual effects are a preference, not a diagnosed problem', () => {
+  const s = normal(); s.configuration = { values: { animations: true, menuAnimation: true, comboAnimation: true } };
+  assert.deepEqual(priorities(s), []);
 });
 test('no recommendations before a snapshot, or invented problems for normal readings', () => {
   assert.deepEqual(priorities(null), []); assert.deepEqual(priorities(normal()), []);
 });
-test('orders incomplete readings, resource pressure, CPU sampling and optional startup review', () => {
+test('orders incomplete readings and resource pressure without generic startup review', () => {
   const s = normal(); s.errors = ['gpu']; s.memory.free = 5; s.cpu[0].LoadPercentage = 95; s.disks[0].FreeSpace = 5; s.startup = [{ Name: 'Example' }];
-  assert.deepEqual(priorities(s).map(x => x.priority), [0, 1, 1, 2, 3]);
+  assert.deepEqual(priorities(s).map(x => x.priority), [0, 1, 1, 2]);
 });
 test('missing and invalid metrics never become resource diagnoses', () => {
   const s = normal(); s.errors = ['cpu', 'disks', 'memory']; s.cpu[0].LoadPercentage = 99; s.disks[0].FreeSpace = 0; s.memory.free = 0;
   assert.equal(priorities(s).length, 1);
   assert.deepEqual(priorities({ errors: [], cpu: [{ LoadPercentage: null }], memory: { total: 0, free: -1 }, disks: [{ Size: 100, FreeSpace: null }] }), []);
 });
-test('startup entries only warrant optional review, never assumed enabled or harmful', () => {
-  const s = normal(); s.startup = [{ Name: 'Security' }];
-  const [item] = priorities(s); assert.equal(item.priority, 3); assert.match(item.evidence, /deshabilitadas/);
+test('startup inventory alone does not imply a bottleneck', () => {
+  const s = normal(); s.startup = [{ Name: 'Security' }, { Name: 'Audio driver' }];
+  assert.deepEqual(priorities(s), []);
+});
+test('different computers produce different evidence-driven recommendations', () => {
+  const healthy = normal(); healthy.startup = [{ Name: 'App' }];
+  healthy.configuration = { values: { animations: true } };
+  const strained = normal(); strained.cpu[0].LoadPercentage = 94; strained.memory.free = 4;
+  const lowStorage = normal(); lowStorage.disks[0].FreeSpace = 3;
+  assert.deepEqual(priorities(healthy), []);
+  assert.deepEqual(priorities(strained).map(x => x.priority), [1, 2]);
+  assert.equal(priorities(lowStorage).length, 1);
+  assert.match(priorities(lowStorage)[0].title, /espacio/);
 });
 test('physical disk warnings take priority, unknown status is never a failure diagnosis', () => {
   const s=normal(); s.physicalDisks=[{Name:'SSD',HealthStatus:'Warning'},{Name:'Unknown disk',HealthStatus:'Unknown'}];
