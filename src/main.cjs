@@ -56,7 +56,7 @@ else {
       await fs.writeFile(choice.filePath, JSON.stringify({ ...lastScan, history: await optimizer.history(), measurements: await measurements.history() }, null, 2));
       return true;
     });
-    window = new BrowserWindow({ width: 1360, height: 940, minWidth: 920, minHeight: 700, icon: path.join(__dirname, 'assets/icon.png'), backgroundColor: '#f5f5f7', title: 'StarOptimizer', autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+    window = new BrowserWindow({ width: 1200, height: 800, minWidth: 760, minHeight: 560, icon: path.join(__dirname, 'assets/icon.png'), backgroundColor: '#f5f5f7', title: 'StarOptimizer', autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
     window.on('close', event => {
       if (mutation) { event.preventDefault(); window.webContents.send('operation-running'); }
     });
