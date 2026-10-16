@@ -18,7 +18,7 @@ npm ci
 npm start
 ```
 
-En Windows PowerShell puedes usar `npm.cmd ci` y `npm.cmd start` si la política de scripts bloquea `npm.ps1`; no es necesario cambiar esa política. Los resultados reales y los bloqueos encontrados están en [el informe de validación local](docs/VALIDATION_2026_10_16.md).
+En Windows PowerShell puedes usar `npm.cmd ci` y `npm.cmd start` si la política de scripts bloquea `npm.ps1`; no es necesario cambiar esa política. Los resultados reales y los bloqueos actuales están en [el informe de aceptación actualizado](docs/ACCEPTANCE_2026_10_16.md).
 
 ## Qué hace
 

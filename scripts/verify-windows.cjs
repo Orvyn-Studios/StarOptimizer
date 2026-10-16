@@ -17,6 +17,7 @@ const fail = (why) => { console.error('FAIL:', why); process.exitCode = 1; };
     assert.ok(Number.isFinite(snapshot.memory?.total) && snapshot.memory.total > 0);
     assert.ok(Number.isFinite(snapshot.memory?.free) && snapshot.memory.free >= 0);
     assert.ok(Array.isArray(snapshot.disks) && Array.isArray(snapshot.startup));
+    assert.ok(snapshot.disks.length > 0, 'Windows must report at least one fixed volume');
     assert.ok(Array.isArray(snapshot.processes) && Array.isArray(snapshot.gpu));
     assert.ok(Array.isArray(snapshot.physicalDisks));
     assert.ok(Array.isArray(config.plans) && config.values);
@@ -28,6 +29,7 @@ const fail = (why) => { console.error('FAIL:', why); process.exitCode = 1; };
       scannedCpu: snapshot.cpu[0]?.LoadPercentage ?? null,
       memoryTotalGiB: +(snapshot.memory.total / 1073741824).toFixed(1),
       disksFound: snapshot.disks.length,
+      diskSource: snapshot.sources?.disks,
       gpusFound: snapshot.gpu.length,
       processGroupsFound: snapshot.processes.length,
       startupEntriesFound: snapshot.startup.length,

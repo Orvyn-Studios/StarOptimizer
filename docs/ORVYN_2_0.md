@@ -1,6 +1,6 @@
 # StarOptimizer 2.0 by Orvyn — development notes
 
-This branch is a **development preview**, not a tested Windows 2.0 release. Its package version is `2.0.0-beta.1`; no 2.0 release has been published. See [the local validation report](VALIDATION_2026_10_16.md) for actual results and remaining blockers.
+This branch is a **development preview**, not a tested stable Windows 2.0 release. Its package version is `2.0.0-beta.1`; a source-only prerelease exists. See [the updated acceptance report](ACCEPTANCE_2026_10_16.md) for actual results and remaining blockers.
 
 ## Goals and policies
 

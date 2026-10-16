@@ -2,6 +2,7 @@ const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const { ps, power } = require('./windows-command.cjs');
+const { readDisks } = require('./disks.cjs');
 const GUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 async function plans() {
   const output = await power(['/list']);
@@ -67,6 +68,7 @@ async function telemetry() {
   return { at: new Date().toISOString(), cpu: cpu[0].LoadPercentage, memory: { total: os.totalmem(), free: os.freemem() } };
 }
 async function scan() {
+  let diskSource = null;
   const sampledCpu = async () => {
     const readings = [];
     for (let i=0;i<8;i++) readings.push((await cpuSample())[0]);
@@ -75,7 +77,7 @@ async function scan() {
   };
   const sections = await Promise.allSettled([
     sampledCpu(),
-    ps('Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID,Size,FreeSpace | ConvertTo-Json -Compress'),
+    readDisks(ps).then(reading => { diskSource = reading.source; return reading.disks; }),
     ps('Get-Process | Group-Object ProcessName | ForEach-Object { [PSCustomObject]@{ ProcessName = $_.Name; Count = $_.Count; WorkingSet64 = ($_.Group | Measure-Object WorkingSet64 -Sum).Sum } } | Sort-Object WorkingSet64 -Descending | Select-Object -First 30 | ConvertTo-Json -Compress'),
     ps('Get-CimInstance Win32_StartupCommand | Select-Object Name,Location | ConvertTo-Json -Compress'),
     plans(),
@@ -83,7 +85,7 @@ async function scan() {
     ps('Get-PhysicalDisk | ForEach-Object { [PSCustomObject]@{ Name = $_.FriendlyName; MediaType = [string]$_.MediaType; HealthStatus = [string]$_.HealthStatus; OperationalStatus = ($_.OperationalStatus -join ", "); Size = $_.Size } } | ConvertTo-Json -Compress')
   ]);
   const names = ['cpu', 'disks', 'processes', 'startup', 'plans', 'gpu', 'physicalDisks'];
-  const result = { at: new Date().toISOString(), platform: `Windows ${os.release()}`, memory: { total: os.totalmem(), free: os.freemem() }, uptime: os.uptime(), errors: [], errorDetails: {} };
+  const result = { at: new Date().toISOString(), platform: `Windows ${os.release()}`, memory: { total: os.totalmem(), free: os.freemem() }, uptime: os.uptime(), errors: [], errorDetails: {}, sources: { disks: diskSource } };
   sections.forEach((section, i) => {
     if (section.status === 'fulfilled') result[names[i]] = [].concat(section.value || []);
     else {
