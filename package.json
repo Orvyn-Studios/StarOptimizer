@@ -12,7 +12,8 @@
     "test:scan": "node test/scan-flow.cjs",
     "test:measure": "node test/measure-ui.cjs",
     "test:live": "node test/live-recommendations.cjs",
-    "dist": "electron-builder --win portable --x64"
+    "dist": "electron-builder --win portable --x64",
+    "test:windows:smoke": "node scripts/verify-windows.cjs"
   },
   "keywords": [],
   "author": "StarOptimizer",
