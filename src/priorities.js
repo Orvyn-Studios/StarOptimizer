@@ -1,6 +1,7 @@
 /* Recommendations are observations from a completed snapshot, never assumed faults. */
 (function (root) {
-  function priorities(s) {
+  function priorities(s, mode = 'intelligent') {
+    if (!['intelligent', 'gaming', 'extreme'].includes(mode)) mode = 'intelligent';
     if (!s) return [];
     const list = [], errors = s.errors || [];
     const add = (priority, title, evidence, action, view) => list.push({ priority, title, evidence, action, view });
@@ -29,6 +30,21 @@
         list.push({ priority: 3, title: 'Opcional: usar el plan Equilibrado', evidence: 'El equipo está conectado a la corriente y tiene activo el plan Economizador. Puedes cambiar a Equilibrado; puede aumentar el consumo respecto al ahorro. No garantiza una mejora y conservarás la opción de restaurar el plan anterior.', action: 'Revisar cambio de energía', view: 'recommendations', changes: { power: balanced } });
       // Animation preferences are user choices, not performance diagnoses.
       // They remain available under Optimizar but no longer masquerade as scan findings.
+    }
+    // Explicit user-selected goals are preferences, never fabricated scan findings.
+    // All changes still use the existing preview / apply / rollback engine.
+    const power = s.configuration?.values?.power;
+    const high = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c';
+    const isAc = s.onBattery === false;
+    const highAvailable = s.configuration?.plans?.some(p => p.id === high);
+    const modeName = mode === 'gaming' ? 'Gaming' : 'Extremo';
+    if (mode !== 'intelligent' && isAc && !errors.includes('plans') && !errors.includes('configuration') && highAvailable && power && power !== high) {
+      list.push({ priority: 3, title: `Opcional (${modeName}): plan Alto rendimiento`, evidence: 'El equipo está conectado a corriente y Windows dispone de Alto rendimiento. No garantiza más FPS; puede aumentar temperatura, ruido y consumo. Se aplicará solo tras confirmación.', action: 'Revisar plan de energía', view: 'recommendations', changes: { power: high } });
+    }
+    if (mode === 'extreme' && !errors.includes('configuration')) {
+      const changes = Object.fromEntries(['animations', 'menuAnimation', 'comboAnimation']
+        .filter(key => s.configuration?.values?.[key] === true).map(key => [key, false]));
+      if (Object.keys(changes).length) list.push({ priority: 3, title: 'Opcional (Extremo): reducir efectos de Windows', evidence: 'Es una preferencia del modo Extremo, no una avería detectada. Puede hacer que los menús parezcan más inmediatos; no aumenta necesariamente los FPS ni libera RAM.', action: 'Revisar efectos visuales', view: 'recommendations', changes });
     }
     return list.sort((a, b) => a.priority - b.priority);
   }
