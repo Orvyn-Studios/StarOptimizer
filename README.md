@@ -1,6 +1,9 @@
-# StarOptimizer
+# StarOptimizer 2.0 (beta de desarrollo)
 
-Aplicación de escritorio para Windows 10/11 x64. Versión 0.6.1: recomendaciones con actualización periódica y revisión conjunta de ajustes automáticos compatibles. Conserva diagnóstico local, perfiles, mediciones antes/después, búsquedas, exportación y ajustes reversibles. Beta sin firma digital. Consulta `GUIA-PUESTA-A-PUNTO.md` para utilizarla en otro equipo.
+> **Rama Orvyn 2.0:** No es una versión estable ni certificada en Windows. No distribuir ni fusionar hasta superar los controles en [docs/ORVYN_2_0.md](docs/ORVYN_2_0.md). La descarga de `releases/latest` sigue apuntando a la versión estable anterior.
+
+
+Aplicación de escritorio para Windows 10/11 x64. Versión 2.0.0-beta.1 (en pruebas): recomendaciones con actualización periódica y revisión conjunta de ajustes automáticos compatibles. Conserva diagnóstico local, perfiles, mediciones antes/después, búsquedas, exportación y ajustes reversibles. Beta sin firma digital. Consulta `GUIA-PUESTA-A-PUNTO.md` para utilizarla en otro equipo.
 
 ## Ejecutar
 
