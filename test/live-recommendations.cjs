@@ -14,6 +14,7 @@ const assert = require('node:assert/strict'); const path = require('node:path');
   });
   await page.evaluate(()=>analyze()); await page.bringToFront(); await page.click('[data-view="recommended"]');
   assert.match(await page.textContent('#priority-list'),/memoria/);
+  assert.match(await page.textContent('#scan-evidence'),/RAM: 95% utilizada/);
   await app.evaluate(()=>{global.liveFixture.free=70;});
   await page.waitForFunction(()=>!document.querySelector('#priority-list').textContent.includes('aplicaciones que ocupan memoria'),null,{timeout:15000}).catch(async error => {
     console.error(await page.evaluate(()=>({hidden:document.hidden,status:document.querySelector('#recommendation-live-status').textContent})),errors);
