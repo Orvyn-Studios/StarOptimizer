@@ -11,7 +11,7 @@ window.createNova = function createNova() {
   let pointerUntil = 0, lastLook = -1;
   let blinkIndex = 0;
   const animations = new Set();
-  const allowed = () => visible && !document.hidden && !simple && !reduce.matches && !destroyed;
+  const allowed = () => visible && !document.hidden && document.visibilityState === 'visible' && !simple && !reduce.matches && !destroyed;
 
   function blink() {
     if (!allowed()) return;
