@@ -266,3 +266,10 @@ h1 { font-size: 34px; letter-spacing: -1.2px; }
 .quick-card { padding: 21px; }
 .selection-panel { border-top: 3px solid #007aff60; }
 @media(max-width:1120px) { .hero-copy { padding: 26px; } .hero h2 { font-size: 35px; } }
+
+/* Orvyn 2.0: native-looking optimization objective selector for light/dark mode. */
+.mode-selector { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:12px 0 16px; font-size:13px; }
+.mode-selector strong { color:var(--text); font-weight:600; }
+.mode-selector select { max-width:100%; min-width:155px; color:var(--text); background:var(--surface-soft); border:1px solid var(--line); border-radius:10px; }
+.mode-selector .mode-hint { flex:1 1 190px; color:var(--muted); font-size:12px; line-height:1.5; }
+@media(max-width:800px) { .mode-selector { align-items:stretch; flex-direction:column; } .mode-selector select { width:100%; } }
