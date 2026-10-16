@@ -40,13 +40,17 @@ jobs:
       - run: npm ci
       - name: Read-only operating-system scanner check
         run: npm run test:windows:smoke
-      - name: Electron UI, workflow, scan and Nova checks
-        run: |
-          npm run test:ui
-          npm run test:workflow
-          npm run test:scan
-          npm run test:live
-          npm run test:nova
-          npm run test:measure
+      - name: Electron user interface
+        run: npm run test:ui
+      - name: Transaction and rollback workflow
+        run: npm run test:workflow
+      - name: Scan and results
+        run: npm run test:scan
+      - name: Live recommendations
+        run: npm run test:live
+      - name: Nova animation
+        run: npm run test:nova
+      - name: Measurements
+        run: npm run test:measure
       - name: Verify portable Windows build without publishing
         run: npm run dist
