@@ -1,17 +1,8 @@
 const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs/promises');
-const { execFile } = require('node:child_process');
+const { ps, power } = require('./windows-command.cjs');
 const GUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
-const win = process.env.SystemRoot || 'C:\\Windows';
-function execute(file, args) {
-  return new Promise((resolve, reject) => execFile(file, args, { windowsHide: true, timeout: 30000, maxBuffer: 4 * 1024 * 1024, encoding: 'utf8' }, (error, stdout) => error ? reject(new Error('Windows no pudo completar la operación. Puede que esté restringida por permisos o por tu equipo.')) : resolve(stdout.trim())));
-}
-async function ps(script) {
-  const prefix = '[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); $ErrorActionPreference = "Stop"; ';
-  return JSON.parse(await execute(path.join(win, 'System32/WindowsPowerShell/v1.0/powershell.exe'), ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(prefix + script, 'utf16le').toString('base64')]));
-}
-async function power(args) { return execute(path.join(win, 'System32/powercfg.exe'), args); }
 async function plans() {
   const output = await power(['/list']);
   return output.split(/\r?\n/).flatMap(line => {
@@ -91,10 +82,13 @@ async function scan() {
     ps('Get-PhysicalDisk | ForEach-Object { [PSCustomObject]@{ Name = $_.FriendlyName; MediaType = [string]$_.MediaType; HealthStatus = [string]$_.HealthStatus; OperationalStatus = ($_.OperationalStatus -join ", "); Size = $_.Size } } | ConvertTo-Json -Compress')
   ]);
   const names = ['cpu', 'disks', 'processes', 'startup', 'plans', 'gpu', 'physicalDisks'];
-  const result = { at: new Date().toISOString(), platform: `Windows ${os.release()}`, memory: { total: os.totalmem(), free: os.freemem() }, uptime: os.uptime(), errors: [] };
+  const result = { at: new Date().toISOString(), platform: `Windows ${os.release()}`, memory: { total: os.totalmem(), free: os.freemem() }, uptime: os.uptime(), errors: [], errorDetails: {} };
   sections.forEach((section, i) => {
     if (section.status === 'fulfilled') result[names[i]] = [].concat(section.value || []);
-    else { result[names[i]] = []; result.errors.push(names[i]); }
+    else {
+      result[names[i]] = []; result.errors.push(names[i]);
+      result.errorDetails[names[i]] = section.reason?.diagnostic || { kind: 'unavailable', code: null };
+    }
   });
   return result;
 }

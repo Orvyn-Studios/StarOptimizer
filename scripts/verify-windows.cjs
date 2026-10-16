@@ -32,7 +32,8 @@ const fail = (why) => { console.error('FAIL:', why); process.exitCode = 1; };
       processGroupsFound: snapshot.processes.length,
       startupEntriesFound: snapshot.startup.length,
       energyPlansFound: config.plans.length,
-      unavailable: snapshot.errors
+      unavailable: snapshot.errors,
+      errorDetails: snapshot.errorDetails
     }, null, 2));
     if (snapshot.errors.includes('cpu') || !Number.isFinite(snapshot.cpu[0]?.LoadPercentage))
       fail('CPU scan failed or produced no usable load value');
