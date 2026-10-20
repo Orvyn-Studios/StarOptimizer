@@ -4,3 +4,9 @@ artifacts/
 test-results/
 playwright-report/
 *.log
+src/native/*.exe
+*.pfx
+*.p12
+.env
+.env.*
+

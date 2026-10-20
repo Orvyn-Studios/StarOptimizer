@@ -1,0 +1,73 @@
+name: Windows build and diagnostics
+on:
+  pull_request:
+  push:
+    tags: ['v*']
+    branches: ['release/v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Check release version
+        if: startsWith(github.ref, 'refs/tags/') || startsWith(github.ref, 'refs/heads/release/')
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $expected = if ($env:GITHUB_REF_TYPE -eq 'tag') { "v$version" } else { "release/v$version" }
+          if ($env:GITHUB_REF_NAME -ne $expected) { throw 'Release ref does not match package.json version' }
+      - run: npm run build:native
+      - run: npm test
+      - run: npm run dist
+      - name: Test the packaged helper
+        shell: pwsh
+        run: |
+          $env:STAROPTIMIZER_TEST_HELPER = Join-Path $PWD 'dist/win-unpacked/resources/app.asar.unpacked/src/native/StarOptimizer.System.exe'
+          node test/native-helper.test.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - run: node test/ui.cjs dist/win-unpacked/StarOptimizer.exe
+      - run: node test/workflow.cjs dist/win-unpacked/StarOptimizer.exe
+      - name: Prepare download and checksums
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          New-Item dist/release -ItemType Directory -Force | Out-Null
+          Copy-Item "dist/StarOptimizer-$version-portable.exe" dist/release/
+          Copy-Item GUIA-PUESTA-A-PUNTO.md, docs/DISTRIBUCION-WINDOWS.md dist/release/
+          Compress-Archive -Path "dist/release/StarOptimizer-$version-portable.exe", dist/release/GUIA-PUESTA-A-PUNTO.md, dist/release/DISTRIBUCION-WINDOWS.md -DestinationPath "dist/release/StarOptimizer-$version-Windows.zip"
+          Get-ChildItem dist/release -File | Where-Object { $_.Extension -in '.exe', '.zip' } | ForEach-Object {
+            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          } | Set-Content "dist/release/StarOptimizer-$version.sha256" -Encoding ascii
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StarOptimizer-Windows-prueba-sin-firma
+          path: dist/release/*
+          if-no-files-found: error
+  release:
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/release/v')
+    needs: windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: StarOptimizer-Windows-prueba-sin-firma
+          path: release
+      - name: Publish Windows beta
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME#release/}"
+          gh release create "$tag" release/* --target "$GITHUB_SHA" --prerelease --title "StarOptimizer ${tag#v} · Windows beta" --notes-file docs/RELEASE-NOTES.md
