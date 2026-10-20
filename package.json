@@ -1,10 +1,12 @@
 {
   "name": "staroptimizer",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Diagnóstico local y ajustes reversibles para Windows",
   "main": "src/main.cjs",
   "scripts": {
     "start": "electron .",
+    "prestart": "node scripts/build-native.cjs",
+    "build:native": "node scripts/build-native.cjs",
     "test": "node --test test/*.test.cjs",
     "test:ui": "node test/ui.cjs",
     "test:workflow": "node test/workflow.cjs",
@@ -12,7 +14,8 @@
     "test:scan": "node test/scan-flow.cjs",
     "test:measure": "node test/measure-ui.cjs",
     "test:live": "node test/live-recommendations.cjs",
-    "dist": "electron-builder --win portable --x64"
+    "dist": "electron-builder --win portable --x64 --publish never",
+    "dist:signed": "electron-builder --win portable --x64 --publish never -c.forceCodeSigning=true && powershell -NoProfile -NonInteractive -File scripts/verify-signatures.ps1"
   },
   "keywords": [],
   "author": "StarOptimizer",
@@ -25,6 +28,8 @@
   },
   "private": true,
   "build": {
+    "beforePack": "scripts/build-native.cjs",
+    "asarUnpack": ["src/native/*.exe"],
     "appId": "com.staroptimizer.desktop",
     "productName": "StarOptimizer",
     "files": [
@@ -36,7 +41,11 @@
     },
     "win": {
       "target": "portable",
-      "signExecutable": false,
+      "signExecutable": true,
+      "signExts": [".dll"],
+      "signtoolOptions": {
+        "signingHashAlgorithms": ["sha256"]
+      },
       "icon": "src/assets/icon.ico"
     },
     "portable": {
@@ -44,3 +53,4 @@
     }
   }
 }
+

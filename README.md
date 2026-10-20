@@ -1,14 +1,14 @@
 # StarOptimizer
 
-Aplicación de escritorio para Windows 10/11 x64. Versión 0.6.1: recomendaciones con actualización periódica y revisión conjunta de ajustes automáticos compatibles. Conserva diagnóstico local, perfiles, mediciones antes/después, búsquedas, exportación y ajustes reversibles. Beta sin firma digital. Consulta `GUIA-PUESTA-A-PUNTO.md` para utilizarla en otro equipo.
+Aplicación de escritorio para Windows 10/11 x64. Desarrollo de la versión 0.6.2: recomendaciones con actualización periódica y revisión conjunta de ajustes automáticos compatibles. Conserva diagnóstico local, perfiles, mediciones antes/después, búsquedas, exportación y ajustes reversibles. Beta sin firma digital. Consulta `GUIA-PUESTA-A-PUNTO.md` para utilizarla en otro equipo.
 
 ## Ejecutar
 
-**[Descargar el programa para Windows](https://github.com/SnoW-099/StarOptimizer/releases/latest)**. Descarga el ZIP, extrae la carpeta y abre el ejecutable. El repositorio es privado: inicia sesión con una cuenta con acceso. La descarga del código fuente no incluye el programa compilado; usa los archivos adjuntos de la versión.
+**[Descargar el programa para Windows](https://github.com/Orvyn-Studios/StarOptimizer/releases/latest)**. Descarga el ZIP, extrae la carpeta y abre el ejecutable. La descarga del código fuente no incluye el programa compilado; usa los archivos adjuntos de la versión.
 
-Descarga o genera `dist/StarOptimizer-0.6.1-portable.exe` y ábrelo. No necesita instalarse ni pide elevación. Windows puede mostrar una advertencia de editor desconocido porque el binario no está firmado. Algunas políticas de empresa pueden impedir leer o modificar ajustes; la app informa del error.
+Descarga o genera `dist/StarOptimizer-0.6.2-portable.exe` y ábrelo. No necesita instalarse ni pide elevación. Windows puede mostrar una advertencia de editor desconocido porque el binario no está firmado. Algunas políticas de empresa pueden impedir leer o modificar ajustes; la app informa del error.
 
-Para desarrollo, con Node.js y npm instalados:
+Para desarrollo, en Windows 10/11 x64 con Node.js y npm instalados. `npm start` compila primero el componente local con el compilador de .NET Framework 4.x de Windows; la app distribuida lo incluye ya compilado:
 
 ```sh
 npm ci
@@ -23,9 +23,9 @@ npm start
 - Cuando hay animaciones de Windows activadas, ofrece una reducción opcional con revisión y aplicación automática del lote compatible. Usa el motor existente, con verificación y restauración: no ejecuta texto arbitrario en CMD, no cierra aplicaciones y no borra archivos. Las recomendaciones de inicio, memoria, almacenamiento y hardware siguen requiriendo una decisión manual; no se presentan como reparaciones automáticas.
 
 - Puesta a punto guía análisis, medición inicial, inicio, perfiles, controles de Windows y comparación final. Las mediciones toman doce muestras y guardan media/pico de CPU y RAM media en `%APPDATA%/StarOptimizer/measurements.json`, conservando las lecturas anteriores. No mide FPS ni declara ganancias de velocidad. El backend impide aplicar cambios durante la medición.
-- Consulta `Get-PhysicalDisk` para mostrar nombre, tipo y estados de salud/operativo, sin números de serie. Si falla o no hay datos, indica no disponible. Un aviso reportado se prioriza antes de ajustes de rendimiento. Esto no sustituye pruebas de salud ni sensores de temperatura.
+- Consulta `MSFT_PhysicalDisk` mediante WMI para mostrar nombre, tipo y estados de salud/operativo, sin números de serie. Si falla o no hay datos, indica no disponible. Un aviso reportado se prioriza antes de ajustes de rendimiento. Esto no sustituye pruebas de salud ni sensores de temperatura.
 
-Referencia técnica: [Get-PhysicalDisk, Microsoft Learn](https://learn.microsoft.com/en-us/powershell/module/storage/get-physicaldisk). El estado procede del proveedor de almacenamiento de Windows y no equivale a una prueba exhaustiva del dispositivo.
+Referencia técnica: [MSFT_PhysicalDisk, Microsoft Learn](https://learn.microsoft.com/en-us/windows-hardware/drivers/storage/msft-physicaldisk). El estado procede del proveedor de almacenamiento de Windows y no equivale a una prueba exhaustiva del dispositivo.
 
 - Al pulsar Analizar, Nova piensa y lee mientras Windows reúne datos. La bombilla aparece tras recibir los resultados; el resumen distingue análisis completo, parcial y fallo. No se simula un porcentaje de avance. Puedes continuar en segundo plano.
 - Recomendados permanece bloqueado hasta recibir un análisis. Ordena lecturas pendientes, presión de almacenamiento/memoria, CPU y revisión opcional de inicio. Cada punto muestra evidencia y una acción; no supone que todas las entradas de inicio estén activadas. Los datos ausentes no se convierten en diagnósticos. La sección se desbloquea de nuevo tras analizar en cada sesión.
@@ -62,7 +62,7 @@ npm run test:live
 npm run dist
 ```
 
-Las 32 pruebas unitarias cubren optimización, prioridades y persistencia de mediciones, incluidos datos ausentes, muestreo fallido e historial corrupto. Las mutaciones usan adaptadores aislados y directorios temporales. `test:scan` verifica bloqueo inicial, error, fases visuales y resumen parcial; `test:measure` comprueba mediciones reales, exclusión de operaciones y recuperación de la lectura inicial tras reiniciar con un perfil de datos aislado.
+Las pruebas unitarias cubren optimización, prioridades y persistencia de mediciones, incluidos datos ausentes, muestreo fallido e historial corrupto. Las mutaciones usan adaptadores aislados y directorios temporales. `test:scan` verifica bloqueo inicial, error, fases visuales y resumen parcial; `test:measure` comprueba mediciones reales, exclusión de operaciones y recuperación de la lectura inicial tras reiniciar con un perfil de datos aislado.
 
 `test:ui` ejecuta un diagnóstico real y lee las opciones nativas, prueba navegación, revisión/cancelación, búsqueda, apariencia, movimiento reducido y una ventana compacta. No aplica ajustes al anfitrión. `test:workflow` prueba desde los botones el ciclo revisión → aplicación → restauración y la recuperación automática de un lote fallido, con el motor real y un adaptador simulado dentro del proceso de prueba. La app distribuida no expone un modo de prueba. Ambas pruebas admiten un ejecutable empaquetado: `node test/ui.cjs dist/win-unpacked/StarOptimizer.exe` y `node test/workflow.cjs dist/win-unpacked/StarOptimizer.exe`.
 
@@ -78,8 +78,11 @@ Referencia visual aportada por el usuario: [Creature Company / LILGUY EYES](http
 
 ## Arquitectura y límites
 
-Electron con sandbox, aislamiento de contexto, sin Node en el renderizador, CSP local, comprobación de emisor IPC y lista cerrada de acciones. PowerShell usa comandos fijos codificados y `powercfg` recibe argumentos separados y GUIDs validados. El historial se escribe antes de cada mutación con reemplazo de archivo. Los permisos, las políticas de empresa o proveedores WMI pueden impedir lecturas o cambios; se presentan como datos no disponibles o errores recuperables.
+Electron con sandbox, aislamiento de contexto, sin Node en el renderizador, CSP local, comprobación de emisor IPC y lista cerrada de acciones. El diagnóstico usa un componente C# compilado al preparar la app, con consultas WMI fijas y llamadas directas a `SystemParametersInfoW`. La app no ejecuta PowerShell, comandos codificados ni compilación de código al utilizarla. El componente acepta una lista cerrada de operaciones y `powercfg` recibe argumentos separados y GUIDs validados. El historial se escribe antes de cada mutación con reemplazo de archivo. Los permisos, las políticas de empresa o proveedores WMI pueden impedir lecturas o cambios; se presentan como datos no disponibles o errores recuperables.
 
 Referencias: [seguridad de Electron](https://www.electronjs.org/docs/latest/tutorial/security), [powercfg de Microsoft](https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/powercfg-command-line-options) y [SystemParametersInfoW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow).
 
-Antes de distribuir ampliamente: firmar el ejecutable y probar restauraciones reales en máquinas virtuales Windows 10/11, portátiles y equipos con Modern Standby. Las pruebas con adaptadores y el diagnóstico local no sustituyen esa matriz de hardware.
+La compilación empaqueta el componente fuera de `app.asar` para ejecutarlo y firmarlo. `npm run dist` crea una compilación de prueba y firma si hay credenciales disponibles. `npm run dist:signed` exige firma y comprueba los ejecutables principal, auxiliar y portable. Consulta [Distribución y bloqueos de Windows](docs/DISTRIBUCION-WINDOWS.md). Cambiar el código no garantiza evitar una detección: la firma, la reputación y el análisis del antivirus se evalúan por separado.
+
+Antes de distribuir ampliamente: firmar todos los ejecutables y probar restauraciones reales en máquinas virtuales Windows 10/11, portátiles y equipos con Modern Standby. Las pruebas con adaptadores y el diagnóstico local no sustituyen esa matriz de hardware.
+

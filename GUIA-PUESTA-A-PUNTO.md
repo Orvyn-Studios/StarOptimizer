@@ -1,6 +1,6 @@
-# StarOptimizer 0.6.1 · Para llevar a otro PC
+# StarOptimizer 0.6.2 · Para llevar a otro PC
 
-Lleva `StarOptimizer-0.6.1-portable.exe`. No requiere instalación ni elevación. El código no necesita viajar con el ejecutable. El historial de ajustes y las mediciones se guardan en el perfil de Windows de ese PC, no junto al ejecutable.
+Lleva `StarOptimizer-0.6.2-portable.exe` una vez compilado. Esta revisión reemplaza PowerShell y la compilación dinámica por un componente incluido en el ejecutable portable. No garantiza eliminar avisos del antivirus o del Control inteligente. Si aparece un bloqueo, conserva el texto exacto, el archivo señalado y el nombre de detección para revisarlo; consulta `docs/DISTRIBUCION-WINDOWS.md`. No requiere instalación ni elevación. El código no necesita viajar con el ejecutable. El historial de ajustes y las mediciones se guardan en el perfil de Windows de ese PC, no junto al ejecutable.
 
 Puedes revisar todos los ajustes automáticos disponibles con el botón conjunto de Recomendados. Comprueba cada valor antes de confirmar. En corriente, si está activo Economizador y existe Equilibrado, se ofrece el cambio opcional; puede aumentar el consumo. Puedes deshacerlo en Historial.
 
@@ -23,3 +23,4 @@ En Recomendados, deja activado el directo para recalcular CPU/RAM periódicament
 La app no borra archivos ni cierra programas para liberar memoria. No repara discos ni comprueba temperaturas de CPU/GPU, estabilidad bajo carga o FPS. Un estado de disco sin avisos no es garantía de salud. Si persisten calentamiento, bloqueos o lentitud, hay que investigar esa causa concreta. No se debe seguir cambiando ajustes al azar.
 
 Para volver atrás después de cerrar o reiniciar la app, usa **Historial**. Los cambios hechos directamente en Configuración de Windows se revierten desde Windows, no desde ese historial.
+

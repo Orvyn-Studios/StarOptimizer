@@ -2,15 +2,13 @@ const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const { execFile } = require('node:child_process');
+const { createWindowsBridge } = require('./windows-bridge.cjs');
 const GUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const win = process.env.SystemRoot || 'C:\\Windows';
 function execute(file, args) {
   return new Promise((resolve, reject) => execFile(file, args, { windowsHide: true, timeout: 30000, maxBuffer: 4 * 1024 * 1024, encoding: 'utf8' }, (error, stdout) => error ? reject(new Error('Windows no pudo completar la operación. Puede que esté restringida por permisos o por tu equipo.')) : resolve(stdout.trim())));
 }
-async function ps(script) {
-  const prefix = '[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); $ErrorActionPreference = "Stop"; ';
-  return JSON.parse(await execute(path.join(win, 'System32/WindowsPowerShell/v1.0/powershell.exe'), ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(prefix + script, 'utf16le').toString('base64')]));
-}
+const windows = createWindowsBridge(execute);
 async function power(args) { return execute(path.join(win, 'System32/powercfg.exe'), args); }
 async function plans() {
   const output = await power(['/list']);
@@ -31,29 +29,11 @@ async function cpuSample() {
   });
   return [{ Name: second[0]?.model || 'Procesador', LoadPercentage: elapsed > 0 ? Math.max(0, Math.min(100, Math.round((1 - idle / elapsed) * 100))) : null }];
 }
-const SPI = {
-  animations: [0x1042, 0x1043],
-  menuAnimation: [0x1002, 0x1003],
-  comboAnimation: [0x1004, 0x1005]
-};
-const nativeUI = `Add-Type -TypeDefinition @'
-using System;
-using System.Runtime.InteropServices;
-public static class StarVisual {
- [DllImport("user32.dll", EntryPoint="SystemParametersInfoW", SetLastError=true)]
- [return: MarshalAs(UnmanagedType.Bool)]
- public static extern bool Get(uint action, uint param, out int value, uint flags);
- [DllImport("user32.dll", EntryPoint="SystemParametersInfoW", SetLastError=true)]
- [return: MarshalAs(UnmanagedType.Bool)]
- public static extern bool Set(uint action, uint param, IntPtr value, uint flags);
-}
-'@; `;
 async function visualState() {
-  return ps(nativeUI + `$result = @{}; ` + Object.entries(SPI).map(([key, [get]]) => `$v = 0; if ([StarVisual]::Get(${get},0,[ref]$v,0)) { $result['${key}'] = [bool]$v } else { $result['${key}'] = $null }; `).join('') + '$result | ConvertTo-Json -Compress');
+  return windows.query('visual-state');
 }
 async function setVisual(key, value) {
-  if (!Object.hasOwn(SPI, key) || typeof value !== 'boolean') throw Error('Ajuste visual no válido.');
-  await ps(nativeUI + `if (-not [StarVisual]::Set(${SPI[key][1]},0,[IntPtr]${value ? 1 : 0},3)) { throw 'Windows rechazó el ajuste visual' }; $true | ConvertTo-Json`);
+  await windows.setVisual(key, value);
 }
 async function optimizationState() {
   const results = await Promise.allSettled([plans(), visualState()]);
@@ -83,12 +63,12 @@ async function scan() {
   };
   const sections = await Promise.allSettled([
     sampledCpu(),
-    ps('Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID,Size,FreeSpace | ConvertTo-Json -Compress'),
-    ps('Get-Process | Group-Object ProcessName | ForEach-Object { [PSCustomObject]@{ ProcessName = $_.Name; Count = $_.Count; WorkingSet64 = ($_.Group | Measure-Object WorkingSet64 -Sum).Sum } } | Sort-Object WorkingSet64 -Descending | Select-Object -First 30 | ConvertTo-Json -Compress'),
-    ps('Get-CimInstance Win32_StartupCommand | Select-Object Name,Location | ConvertTo-Json -Compress'),
+    windows.query('disks'),
+    windows.query('processes'),
+    windows.query('startup'),
     plans(),
-    ps('Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion | ConvertTo-Json -Compress'),
-    ps('Get-PhysicalDisk | ForEach-Object { [PSCustomObject]@{ Name = $_.FriendlyName; MediaType = [string]$_.MediaType; HealthStatus = [string]$_.HealthStatus; OperationalStatus = ($_.OperationalStatus -join ", "); Size = $_.Size } } | ConvertTo-Json -Compress')
+    windows.query('gpu'),
+    windows.query('physical-disks')
   ]);
   const names = ['cpu', 'disks', 'processes', 'startup', 'plans', 'gpu', 'physicalDisks'];
   const result = { at: new Date().toISOString(), platform: `Windows ${os.release()}`, memory: { total: os.totalmem(), free: os.freemem() }, uptime: os.uptime(), errors: [] };
@@ -158,3 +138,4 @@ function createPowerManager(directory, adapter = { plans, power }) {
   return { read, apply, undo };
 }
 module.exports = { scan, plans, createPowerManager, optimizationAdapter, telemetry };
+
