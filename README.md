@@ -1,4 +1,83 @@
-# StarOptimizer 2.0 (beta de desarrollo)
+<div align="center">
+
+<img src="src/assets/icon-512.png" alt="Icono de StarOptimizer: Nova" width="128" height="128">
+
+# StarOptimizer
+
+**Tu PC con Windows, en su mejor forma.**<br>
+Diagnóstico real, un plan claro y cambios que siempre puedes deshacer.
+
+![Windows 10/11](https://img.shields.io/badge/Windows-10%20%7C%2011-5a54f0?style=flat-square&logo=windows11&logoColor=white)
+![Versión](https://img.shields.io/badge/versión-2.0.0-8b84ff?style=flat-square)
+![Sin telemetría](https://img.shields.io/badge/telemetría-ninguna-3f7cf5?style=flat-square)
+![Funciona sin conexión](https://img.shields.io/badge/funciona-sin%20conexión-3f7cf5?style=flat-square)
+![Electron](https://img.shields.io/badge/Electron-47848F?style=flat-square&logo=electron&logoColor=white)
+
+<sub>Por <a href="https://github.com/Orvyn-Studios">Orvyn Studios</a> · Interfaz en español</sub>
+
+<br>
+
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="docs/images/inicio-claro.png">
+  <img src="docs/images/inicio-oscuro.png" alt="Pantalla de inicio de StarOptimizer con CPU, memoria y espacio libre" width="860">
+</picture>
+
+</div>
+
+## ✨ Lo esencial
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### 🔍 Analiza
+CPU, memoria, discos y su estado de salud, gráfica, procesos y apps de inicio. Solo lecturas reales: si un dato falta, lo dice.
+
+</td>
+<td width="33%" valign="top">
+
+### 🧭 Recomienda
+Un plan ordenado por importancia en tres modos: **Inteligente**, **Gaming** y **Extremo**. Lo opcional se marca como opcional.
+
+</td>
+<td width="33%" valign="top">
+
+### ↩️ Deshace
+Antes de aplicar ves el valor actual y el nuevo. Todo queda en **Historial** y se restaura, incluso tras reiniciar.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+### 🧹 Libera espacio
+Temporales, cachés de navegadores, miniaturas y papelera. Revisas la lista antes de borrar nada.
+
+</td>
+<td valign="top">
+
+### ⚡ Arranque más rápido
+Elige qué apps se abren al encender, con un interruptor por app.
+
+</td>
+<td valign="top">
+
+### 🔒 Privada
+Todo se queda en tu equipo: sin cuentas, sin anuncios, sin telemetría y sin necesidad de internet.
+
+</td>
+</tr>
+</table>
+
+<div align="center">
+
+<img src="docs/images/plan.png" alt="Plan tras el análisis" width="49%"> <img src="docs/images/limpieza.png" alt="Limpieza de espacio" width="49%">
+
+</div>
+
+---
+
+## Desarrollo
 
 > **Rama Orvyn 2.0:** No es una versión estable ni certificada en Windows. No distribuir ni fusionar hasta superar los controles en [docs/ORVYN_2_0.md](docs/ORVYN_2_0.md). La descarga de `releases/latest` sigue apuntando a la versión estable anterior.
 
