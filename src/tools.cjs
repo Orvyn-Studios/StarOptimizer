@@ -70,22 +70,28 @@ async function setStartup(name, enabled, run = ps) {
 /* ---------- Reversible registry preferences, merged into the optimizer adapter ---------- */
 const TOGGLES = {
   transparency: { key: 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize', name: 'EnableTransparency', missing: null },
-  gameMode: { key: 'HKCU:\\Software\\Microsoft\\GameBar', name: 'AutoGameModeEnabled', missing: true } // Windows 10 1903+ default: on
+  gameMode: { key: 'HKCU:\\Software\\Microsoft\\GameBar', name: 'AutoGameModeEnabled', missing: true }, // Windows 10 1903+ default: on
+  // Xbox Game Bar background capture keeps an encoder ready while you play.
+  gameCapture: { key: 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR', name: 'AppCaptureEnabled', missing: true },
+  // Tips, suggestions and "get even more out of Windows" notifications.
+  windowsTips: { key: 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'SubscribedContent-338389Enabled', missing: true },
+  // Stored inverted by Windows: GlobalUserDisabled = 1 means background apps are off.
+  backgroundApps: { key: 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications', name: 'GlobalUserDisabled', missing: true, inverted: true }
 };
 async function readToggles(run = ps) {
-  const raw = await run('$r = @{}; ' + Object.entries(TOGGLES).map(([id, t]) => `$v = (Get-ItemProperty -LiteralPath '${t.key}' -ErrorAction SilentlyContinue).'${t.name}'; if ($null -eq $v) { $r['${id}'] = $null } else { $r['${id}'] = ([int]$v -ne 0) }; `).join('') + '$r | ConvertTo-Json -Compress');
+  const raw = await run('$r = @{}; ' + Object.entries(TOGGLES).map(([id, t]) => `$v = (Get-ItemProperty -LiteralPath '${t.key}' -ErrorAction SilentlyContinue).'${t.name}'; if ($null -eq $v) { $r['${id}'] = $null } else { $r['${id}'] = ([int]$v ${t.inverted ? '-eq' : '-ne'} 0) }; `).join('') + '$r | ConvertTo-Json -Compress');
   return Object.fromEntries(Object.entries(TOGGLES).map(([id, t]) => [id, typeof raw?.[id] === 'boolean' ? raw[id] : t.missing]));
 }
 async function setToggle(id, value, run = ps) {
   const t = TOGGLES[id];
   if (!t || typeof value !== 'boolean') throw Error('Ajuste no válido.');
-  await run(`if (-not (Test-Path -LiteralPath '${t.key}')) { New-Item -Path '${t.key}' | Out-Null }; Set-ItemProperty -LiteralPath '${t.key}' -Name '${t.name}' -Value ${value ? 1 : 0} -Type DWord; $true | ConvertTo-Json`);
+  await run(`if (-not (Test-Path -LiteralPath '${t.key}')) { New-Item -Path '${t.key}' | Out-Null }; Set-ItemProperty -LiteralPath '${t.key}' -Name '${t.name}' -Value ${value !== Boolean(t.inverted) ? 1 : 0} -Type DWord; $true | ConvertTo-Json`);
 }
 function extendAdapter(base, run = ps) {
   return {
     async snapshot() {
       const [state, toggles] = await Promise.all([base.snapshot(), readToggles(run).catch(() => ({}))]);
-      const values = { ...state.values, transparency: toggles.transparency ?? null, gameMode: toggles.gameMode ?? null };
+      const values = { ...state.values, ...Object.fromEntries(Object.keys(TOGGLES).map(id => [id, toggles[id] ?? null])) };
       return { ...state, values, unavailable: Object.keys(values).filter(k => values[k] === null) };
     },
     set: (key, value) => Object.hasOwn(TOGGLES, key) ? setToggle(key, value, run) : base.set(key, value)

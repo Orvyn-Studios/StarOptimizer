@@ -50,7 +50,7 @@ test('toggles adapter merges registry preferences and routes writes', async () =
   const run = async script => script.includes('Set-ItemProperty') ? (calls.push(['reg', script.includes('-Value 0') ? 0 : 1]), true) : { transparency: true, gameMode: null };
   const adapter = t.extendAdapter(base, run);
   const state = await adapter.snapshot();
-  assert.deepEqual(state.values, { power: null, animations: true, transparency: true, gameMode: true });
+  assert.deepEqual(state.values, { power: null, animations: true, transparency: true, gameMode: true, gameCapture: true, windowsTips: true, backgroundApps: true });
   assert.deepEqual(state.unavailable, ['power']);
   await adapter.set('transparency', false); await adapter.set('animations', false);
   assert.deepEqual(calls, [['reg', 0], ['base', 'animations', false]]);
@@ -84,4 +84,12 @@ test('cleanup walk skips recent temp files and never leaves the root', async t2 
   assert.equal(await fs.readFile(path.join(outside, 'precious.txt'), 'utf8'), 'keep me', 'links are not followed');
   await assert.rejects(fs.access(path.join(temp, 'sub')), 'emptied subfolders are removed');
   assert.equal((await cleanup.preview()).totalFreed, 150);
+});
+
+test('inverted toggle writes the opposite registry value', async () => {
+  const scripts = [];
+  await t.setToggle('backgroundApps', false, async s => { scripts.push(s); return true; });
+  assert.match(scripts[0], /GlobalUserDisabled' -Value 1/);
+  const read = await t.readToggles(async s => { assert.match(s, /GlobalUserDisabled'; if \(\$null -eq \$v\) \{ \$r\['backgroundApps'\] = \$null \} else \{ \$r\['backgroundApps'\] = \(\[int\]\$v -eq 0\)/); return { backgroundApps: false }; });
+  assert.equal(read.backgroundApps, false);
 });

@@ -1,6 +1,6 @@
 {
   "name": "staroptimizer",
-  "version": "2.0.0-beta.1",
+  "version": "2.0.0",
   "description": "Diagnóstico local y ajustes reversibles para Windows",
   "main": "src/main.cjs",
   "scripts": {
@@ -13,7 +13,8 @@
     "test:measure": "node test/measure-ui.cjs",
     "test:live": "node test/live-recommendations.cjs",
     "dist": "electron-builder --win portable --x64",
-    "test:windows:smoke": "node scripts/verify-windows.cjs"
+    "test:windows:smoke": "node scripts/verify-windows.cjs",
+    "dist:store": "electron-builder --win appx --x64"
   },
   "keywords": [],
   "author": "StarOptimizer",
@@ -39,12 +40,29 @@
       "output": "dist"
     },
     "win": {
-      "target": "portable",
+      "target": [
+        "portable",
+        "appx"
+      ],
       "signExecutable": false,
       "icon": "src/assets/icon.ico"
     },
     "portable": {
       "artifactName": "StarOptimizer-${version}-portable.exe"
+    },
+    "appx": {
+      "identityName": "Snow099.StarOptimizer",
+      "publisher": "CN=6B89B3B6-A665-4A0C-8E0F-15C4A076AC42",
+      "publisherDisplayName": "Snow099",
+      "displayName": "StarOptimizer",
+      "applicationId": "StarOptimizer",
+      "backgroundColor": "transparent",
+      "languages": [
+        "es-ES",
+        "en-US"
+      ],
+      "customManifestPath": "appxmanifest.xml",
+      "artifactName": "StarOptimizer-${version}.appx"
     }
   }
 }

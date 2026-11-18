@@ -27,19 +27,22 @@
 <aside class="rail">
 <div class="brand-mark" aria-label="StarOptimizer"><img src="assets/icon-512.png" alt="" width="34" height="34"><span>StarOptimizer<small>by Orvyn</small></span></div>
 <nav aria-label="Navegación principal">
+<span class="nav-group">General</span>
 <button class="nav active" data-view="overview" aria-current="page"><svg><use href="#i-home"/></svg><span>Inicio</span></button>
 <button class="nav" data-view="recommended" disabled title="Analiza tu equipo para desbloquear las recomendaciones"><svg><use href="#i-spark"/></svg><span>Recomendados</span></button>
 <button class="nav" data-view="recommendations"><svg><use href="#i-tune"/></svg><span>Optimizar</span></button>
+<span class="nav-group">Herramientas</span>
 <button class="nav" data-view="cleanup"><svg><use href="#i-clean"/></svg><span>Limpieza</span></button>
 <button class="nav" data-view="startup"><svg><use href="#i-start"/></svg><span>Apps de inicio</span></button>
 <button class="nav" data-view="processes"><svg><use href="#i-apps"/></svg><span>Recursos</span></button>
 <button class="nav" data-view="tuneup"><svg><use href="#i-shield"/></svg><span>Puesta a punto</span></button>
+<span class="nav-group">Registro</span>
 <button class="nav" data-view="history"><svg><use href="#i-history"/></svg><span>Historial</span><i id="history-dot" hidden></i></button>
 </nav>
 <div class="rail-foot">
 <button id="device-switch" class="device-chip" title="Cambiar el tipo de equipo"><svg><use href="#i-laptop"/></svg><span><strong id="device-name">Equipo</strong><small>Cambiar</small></span></button>
 <button id="appearance" class="appearance" aria-pressed="false" title="Usar apariencia sencilla, con menos efectos"><svg><use href="#i-layers"/></svg><span>Fluida</span></button>
-<span class="rail-version">Versión 2.0.0-beta.1</span>
+<span class="rail-version">Versión 2.0.0</span>
 </div></aside>
 <div class="shell"><header><div class="wordmark" id="wordmark">Mi equipo<small>WINDOWS</small></div><div class="header-right"><span class="local"><i class="dot"></i> Todo se queda en tu equipo</span><button class="icon-button theme-button" id="theme" title="Activar modo claro" aria-label="Activar modo claro" aria-pressed="true"><svg><use href="#i-moon"/></svg></button><button class="icon-button" id="export" title="Exportar diagnóstico" aria-label="Exportar diagnóstico"><svg><use href="#i-export"/></svg></button></div></header><main>
 <div class="heading"><div><p class="eyebrow" id="eyebrow">VISIÓN GENERAL</p><h1 id="title">Todo en su sitio.</h1><p id="subtitle">El estado de tu equipo y tus ajustes, en un solo lugar.</p></div><span class="mini-status" id="machine-status"><i class="dot muted"></i> Listo para analizar</span></div>
@@ -48,9 +51,9 @@
 <div class="mascot-space" id="nova-space"><div class="nova-aura"></div><div class="nova-orbit"></div><span class="particle particle-a">✧</span><span class="particle particle-b">·</span><span class="particle particle-c">+</span><button class="nova-button" id="nova" aria-label="Centrar mirada de Nova"><span class="mascot"><span class="nova-shine"></span><span class="nova-star">✦</span><span class="face"><span class="eyes"><span class="eye"><span class="iris"><span class="pupil"></span><span class="eye-light"></span></span></span><span class="eye"><span class="iris"><span class="pupil"></span><span class="eye-light"></span></span></span></span><span class="cheek left"></span><span class="cheek right"></span><span class="smile"></span></span></span></button><div class="nova-shadow"></div><div class="nova-caption"><span class="dot"></span><span id="nova-caption">Nova está contigo</span></div></div></div>
 <div class="section-title"><h3>Ahora mismo</h3><label class="live-control"><input id="live" type="checkbox"><span class="toggle"></span> En directo <small id="live-status">cada 5 s</small></label></div>
 <div class="metrics">
-<article class="metric glass"><div class="metric-top"><svg><use href="#i-chip"/></svg><span>Procesador</span><small>CPU</small></div><div class="metric-value" id="cpu-value">— <em>%</em></div><progress id="cpu-bar" max="100" value="0"></progress><p id="cpu-detail">Pendiente de análisis</p></article>
-<article class="metric glass"><div class="metric-top"><svg><use href="#i-ram"/></svg><span>Memoria</span><small>RAM</small></div><div class="metric-value" id="memory-value">— <em>GB</em></div><progress id="memory-bar" max="100" value="0"></progress><p id="memory-detail">Pendiente de análisis</p></article>
-<article class="metric glass"><div class="metric-top"><svg><use href="#i-disk"/></svg><span>Espacio libre</span><small>DISCO</small></div><div class="metric-value" id="disk-value">— <em>GB</em></div><progress id="disk-bar" max="100" value="0"></progress><p id="disk-detail">Pendiente de análisis</p></article></div>
+<article class="metric glass"><div class="metric-top"><svg><use href="#i-chip"/></svg><span>Procesador</span><small class="metric-state" id="cpu-state">CPU</small></div><div class="metric-line"><div class="metric-value" id="cpu-value">— <em>%</em></div><span class="metric-delta" id="cpu-delta"></span></div><progress id="cpu-bar" max="100" value="0"></progress><p id="cpu-detail">Pendiente de análisis</p></article>
+<article class="metric glass"><div class="metric-top"><svg><use href="#i-ram"/></svg><span>Memoria</span><small class="metric-state" id="memory-state">RAM</small></div><div class="metric-line"><div class="metric-value" id="memory-value">— <em>GB</em></div><span class="metric-delta" id="memory-delta"></span></div><progress id="memory-bar" max="100" value="0"></progress><p id="memory-detail">Pendiente de análisis</p></article>
+<article class="metric glass"><div class="metric-top"><svg><use href="#i-disk"/></svg><span>Espacio libre</span><small class="metric-state" id="disk-state">DISCO</small></div><div class="metric-line"><div class="metric-value" id="disk-value">— <em>GB</em></div><span class="metric-delta" id="disk-delta"></span></div><progress id="disk-bar" max="100" value="0"></progress><p id="disk-detail">Pendiente de análisis</p></article></div>
 <div class="section-title"><h3>Acciones rápidas</h3></div>
 <div class="bottom-grid">
 <button class="quick-card glass" data-go="cleanup"><span class="quick-icon"><svg><use href="#i-clean"/></svg></span><span><strong>Liberar espacio</strong><small id="cleanup-summary">Temporales, cachés y papelera.</small></span><svg><use href="#i-arrow"/></svg></button>

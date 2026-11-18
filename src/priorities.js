@@ -50,11 +50,20 @@
     }
     if (mode !== 'intelligent' && readable('gameMode') && s.configuration?.values?.gameMode === false)
       list.push({ priority: 3, title: `Opcional (${modeName}): activar Modo Juego`, evidence: 'Está desactivado en Windows. Con él activo, Windows da prioridad al juego en primer plano y aplaza actualizaciones durante la partida.', action: 'Revisar Modo Juego', view: 'recommendations', changes: { gameMode: true } });
+    if (mode !== 'intelligent' && readable('gameCapture') && s.configuration?.values?.gameCapture === true)
+      list.push({ priority: 3, title: `Opcional (${modeName}): quitar la grabación en segundo plano`, evidence: 'Game Bar puede estar grabando en segundo plano mientras juegas. Si no guardas clips con Win+Alt+G, puedes quitarlo.', action: 'Revisar grabación', view: 'recommendations', changes: { gameCapture: false } });
+    if (readable('windowsTips') && s.configuration?.values?.windowsTips === true)
+      list.push({ priority: 3, title: 'Opcional: quitar consejos de Windows', evidence: 'Las notificaciones de consejos y sugerencias están activadas. Quitarlas no cambia el rendimiento, solo hay menos avisos.', action: 'Revisar avisos', view: 'recommendations', changes: { windowsTips: false } });
+    if (mode === 'extreme' && readable('backgroundApps') && s.configuration?.values?.backgroundApps === true)
+      list.push({ priority: 3, title: 'Opcional (Extremo): frenar apps en segundo plano', evidence: 'Las apps de la Tienda pueden ejecutarse aunque no las uses. Al frenarlas, sus notificaciones pueden llegar más tarde.', action: 'Revisar segundo plano', view: 'recommendations', changes: { backgroundApps: false } });
     if (mode === 'extreme') {
       const changes = Object.fromEntries(['animations', 'menuAnimation', 'comboAnimation', 'transparency']
         .filter(key => readable(key) && s.configuration?.values?.[key] === true).map(key => [key, false]));
       if (Object.keys(changes).length) list.push({ priority: 3, title: 'Opcional (Extremo): reducir efectos de Windows', evidence: 'Es una preferencia del modo Extremo, no una avería detectada. Puede hacer que los menús parezcan más inmediatos; no aumenta necesariamente los FPS ni libera RAM.', action: 'Revisar efectos visuales', view: 'recommendations', changes });
     }
+    const enabledStartup = Array.isArray(s.startupApps) ? s.startupApps.filter(a => a.enabled).length : 0;
+    if (enabledStartup >= 8)
+      add(2, `${enabledStartup} apps arrancan con Windows`, 'Cada una se abre al encender el equipo y alarga el arranque. Desactiva las que no uses a diario; se puede volver a activar.', 'Revisar inicio', 'startup', 'Arranque');
     // Space that can actually be reclaimed, measured file by file.
     if (Number.isFinite(s.cleanup?.bytes) && s.cleanup.bytes >= GiB)
       add(2, `Liberar ${(s.cleanup.bytes / GiB).toLocaleString('es-ES', { maximumFractionDigits: 1 })} GB de temporales y cachés`, 'Medido en tu equipo: temporales antiguos, cachés de navegador y papelera. Revisarás la lista antes de borrar nada.', 'Liberar espacio', 'cleanup', 'Espacio recuperable');

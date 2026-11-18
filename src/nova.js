@@ -15,7 +15,7 @@ window.createNova = function createNova() {
   let timer, lookTimer, frame, reactionTimer, deadline = 0, target = { x: 0, y: 0, motion: {} };
   let busy = false;
   let pointerUntil = 0, lastLook = -1;
-  let blinkIndex = 0;
+  let blinkIndex = 0, scanTimer, scanLine = 0;
   const animations = new Set();
   const allowed = () => visible && !document.hidden && document.visibilityState === 'visible' && !simple && !reduce.matches && !destroyed;
   function play(element, keyframes, options) {
@@ -30,10 +30,10 @@ window.createNova = function createNova() {
     if (!allowed()) return;
     const duration = blinkIndex++ % 2 ? 720 : 360;
     for (const eye of eyes) play(eye, [
-      { scale: '1 1', translate: '0 0', rotate: '13deg', offset: 0, easing: 'cubic-bezier(.4,0,.7,1)' },
+      { scale: '1 1', translate: '0 0', rotate: '0deg', offset: 0, easing: 'cubic-bezier(.4,0,.7,1)' },
       { scale: '1 .4', translate: '0 18px', rotate: '0deg', offset: .36 },
       { scale: '1 .4', translate: '0 18px', rotate: '0deg', offset: .53, easing: 'cubic-bezier(.16,1,.3,1)' },
-      { scale: '1 1', translate: '0 0', rotate: '13deg', offset: 1 }
+      { scale: '1 1', translate: '0 0', rotate: '0deg', offset: 1 }
     ], { duration });
     for (const lid of lids) play(lid, [
       { transform: 'translateY(-110%)', offset: 0, easing: 'cubic-bezier(.4,0,.7,1)' },
@@ -128,7 +128,7 @@ window.createNova = function createNova() {
     play(part('.mascot'), [{ scale: '1 1' }, { scale: '1.09 .9', offset: .22 }, { scale: '.97 1.04', offset: .55 }, { scale: '1 1' }], { duration: 560, easing: 'cubic-bezier(.33,0,.25,1)' });
   }
   function stop() {
-    clearTimeout(timer); clearTimeout(lookTimer); clearTimeout(reactionTimer); cancelAnimationFrame(frame); frame = null;
+    clearTimeout(timer); clearTimeout(lookTimer); clearTimeout(reactionTimer); clearTimeout(scanTimer); cancelAnimationFrame(frame); frame = null;
     for (const animation of animations) animation.cancel();
     animations.clear();
     button.style.setProperty('--gaze-x', '0px'); button.style.setProperty('--gaze-y', '0px');
@@ -186,6 +186,28 @@ window.createNova = function createNova() {
       reactionTimer = setTimeout(() => {
         if (!destroyed) space.dataset.novaState = allowed() && busy ? 'working' : 'idle';
       }, 1400);
+    },
+    // While a scan runs: eyes read across in short lines, with a small bob at each line break.
+    scanning(on) {
+      clearTimeout(scanTimer); scanLine = 0;
+      if (!on || destroyed) { if (!destroyed) center(); return; }
+      // Calm reading: eyes look down at the book and drift slowly across each line.
+      const read = () => {
+        if (!allowed()) { scanTimer = setTimeout(read, 800); return; }
+        const y = 7 + (scanLine++ % 2) * 2;
+        gaze(-6, y, { duration: 700, easing: GENTLE });
+        scanTimer = setTimeout(() => {
+          gaze(6, y, { duration: 1500, easing: 'cubic-bezier(.45,.05,.55,.95)' });
+          scanTimer = setTimeout(read, 1700);
+        }, 800);
+      };
+      pointerUntil = performance.now() + 1e9; clearTimeout(lookTimer); read();
+    },
+    // One finished reading: a quick nod; a failed one: a small head shake.
+    beat(failed) {
+      if (!allowed()) return;
+      if (failed) play(part('.face'), [{ translate: '0 0' }, { translate: '-3px 0', offset: .3 }, { translate: '2px 0', offset: .65 }, { translate: '0 0' }], { duration: 380 });
+      else play(part('.face'), [{ translate: '0 0' }, { translate: '0 3px', offset: .35 }, { translate: '0 0' }], { duration: 300, easing: 'cubic-bezier(.33,0,.25,1)' });
     },
     land() { if (allowed()) play(part('.mascot'), [{ scale: '1 1' }, { scale: '1.08 .92', offset: .3 }, { scale: '.98 1.03', offset: .65 }, { scale: '1 1' }], { duration: 520, easing: 'cubic-bezier(.33,0,.25,1)' }); },
     destroy() {

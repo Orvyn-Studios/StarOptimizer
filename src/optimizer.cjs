@@ -2,7 +2,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const GUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
-const labels = { power: 'Plan de energía', animations: 'Animaciones de interfaz', menuAnimation: 'Animaciones de menús', comboAnimation: 'Animaciones de listas', transparency: 'Efectos de transparencia', gameMode: 'Modo Juego' };
+const labels = { power: 'Plan de energía', animations: 'Animaciones de interfaz', menuAnimation: 'Animaciones de menús', comboAnimation: 'Animaciones de listas', transparency: 'Efectos de transparencia', gameMode: 'Modo Juego', gameCapture: 'Grabación en segundo plano (Game Bar)', windowsTips: 'Consejos y sugerencias de Windows', backgroundApps: 'Apps en segundo plano' };
 const active = entry => ['pending', 'applied', 'recovering', 'recovery-needed'].includes(entry.status);
 const valid = (key, value) => key === 'power' ? typeof value === 'string' && GUID.test(value) : Object.hasOwn(labels, key) && typeof value === 'boolean';
 function createOptimizer(directory, adapter, now = Date.now) {

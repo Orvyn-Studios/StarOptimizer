@@ -151,11 +151,11 @@
   async function scanCleanup() {
     if (cleaning) return;
     $('cleanup-scan').disabled = true; $('cleanup-run').disabled = true;
-    $('cleanup-scan').textContent = 'Calculando…';
+    $('cleanup-scan').textContent = 'Calculando…'; $('cleanup-scan').setAttribute('aria-busy', 'true');
     $('cleanup-lead').textContent = 'Midiendo temporales, cachés y papelera. Solo se lee, no se borra nada.';
     try { cleanupPlan = await call('cleanupPreview'); if (snapshot) { snapshot.cleanup = { bytes: cleanupPlan.categories.filter(c => c.available).reduce((n, c) => n + c.bytes, 0) }; renderPriorities(); } renderCleanup(); }
     catch (e) { toast(e.message); }
-    finally { $('cleanup-scan').disabled = false; $('cleanup-scan').textContent = 'Volver a calcular'; updateCleanupButton(); }
+    finally { $('cleanup-scan').disabled = false; $('cleanup-scan').textContent = 'Volver a calcular'; $('cleanup-scan').removeAttribute('aria-busy'); updateCleanupButton(); }
   }
   $('cleanup-scan').addEventListener('click', scanCleanup);
   $('cleanup-run').addEventListener('click', () => {
@@ -181,6 +181,7 @@
     if (snapshot) analyze();
   });
 
+  window.starRefreshCleanup = () => { if (!cleaning) scanCleanup(); };
   /* ---------- Snapshot hook ---------- */
   window.onStarSnapshot = s => {
     if (startupApps) s.startupApps = startupApps;

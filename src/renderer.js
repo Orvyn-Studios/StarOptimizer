@@ -29,7 +29,10 @@ const visual = {
   menuAnimation: ['Menús más directos', 'Los menús se abren al instante, sin transición.', false],
   comboAnimation: ['Listas sin transiciones', 'Las listas desplegables se abren sin animación.', false],
   transparency: ['Quitar transparencias', 'Barra de tareas, Inicio y ventanas opacas. Menos trabajo para la gráfica; útil en batería y equipos modestos.', false],
-  gameMode: ['Activar Modo Juego', 'Windows da prioridad al juego en primer plano y evita instalar actualizaciones mientras juegas.', true]
+  gameMode: ['Activar Modo Juego', 'Windows da prioridad al juego en primer plano y evita instalar actualizaciones mientras juegas.', true],
+  gameCapture: ['Quitar la grabación en segundo plano', 'Game Bar deja de grabar en segundo plano mientras juegas. Si usas Win+Alt+G para guardar clips, déjalo como está.', false],
+  windowsTips: ['Quitar consejos de Windows', 'Menos notificaciones de "sácale más partido a Windows" y sugerencias.', false],
+  backgroundApps: ['Frenar apps en segundo plano', 'Las apps de la Tienda no se ejecutan cuando no las usas. Puede retrasar notificaciones de esas apps.', false]
 };
 const labels = {
   tuneup: ['Puesta a punto.', 'Un recorrido guiado: mide, ajusta y comprueba el resultado.', 'PASO A PASO'],
@@ -158,9 +161,10 @@ async function prepareProfile(profile) {
   draft = {}; clearProfile();
   const { plans, values } = snapshot.configuration;
   if (profile === 'fluid') {
-    for (const [key, [, , goal]] of Object.entries(visual)) if (goal === false && values[key] === true && !isLocked(key)) draft[key] = false;
+    for (const key of ['animations', 'menuAnimation', 'comboAnimation', 'transparency']) if (values[key] === true && !isLocked(key)) draft[key] = false;
   } else {
     if (profile === 'performance' && values.gameMode === false && !isLocked('gameMode')) draft.gameMode = true;
+    if (profile === 'performance' && values.gameCapture === true && !isLocked('gameCapture')) draft.gameCapture = false;
     const id = profile === 'daily' ? '381b4222-f694-41f0-9685-ff5bb260df2e' : '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c';
     const plan = plans.find(p => p.id === id) || plans.find(p => profile === 'daily' ? /^(equilibrado|balanced)$/i.test(p.name) : /^(alto rendimiento|high performance)$/i.test(p.name));
     if (!plan) toast('Este perfil no tiene un plan compatible en tu equipo. Puedes elegir uno de los planes disponibles.');
@@ -200,10 +204,29 @@ async function loadHistory() {
   renderConfiguration();
 }
 function metric(id, value, unit) { const el = $(id); el.replaceChildren(document.createTextNode(`${value} `), node('em', unit)); }
+// Status from the reading itself; delta against the previous reading of the same metric.
+const lastReading = {};
+function metricStatus(id, percent, high, critical, delta, format) {
+  const card = $(`${id}-bar`).closest('.metric'), state = $(`${id}-state`), change = $(`${id}-delta`);
+  const level = percent == null ? null : percent >= critical ? 'critical' : percent >= high ? 'high' : 'normal';
+  card.dataset.level = level || '';
+  card.classList.toggle('high', level !== null && level !== 'normal');
+  state.dataset.label ??= state.textContent;
+  state.textContent = { normal: 'Normal', high: 'Alto', critical: 'Crítico' }[level] || state.dataset.label;
+  if (delta == null || !Number.isFinite(delta)) { change.textContent = ''; change.dataset.dir = ''; return; }
+  const rounded = Math.abs(delta) < (format === 'pts' ? 1 : .05) ? 0 : delta;
+  change.dataset.dir = rounded > 0 ? 'up' : rounded < 0 ? 'down' : 'same';
+  change.textContent = rounded === 0 ? 'sin cambios' : `${rounded > 0 ? '+' : '−'}${format === 'pts' ? Math.round(Math.abs(rounded)) + ' pts' : GB(Math.abs(rounded)) + ' GB'}`;
+  change.title = 'Respecto a la lectura anterior';
+}
 function renderTelemetry(cpu, memory) {
   metric('cpu-value', cpu === null ? '—' : cpu, '%'); $('cpu-bar').value = cpu ?? 0;
+  metricStatus('cpu', cpu, 60, 85, cpu != null && lastReading.cpu != null ? cpu - lastReading.cpu : null, 'pts');
+  if (cpu != null) lastReading.cpu = cpu;
   const used = memory.total - memory.free;
   metric('memory-value', GB(used), 'GB'); $('memory-bar').value = used / memory.total * 100;
+  metricStatus('memory', used / memory.total * 100, 75, 90, lastReading.memory != null ? used - lastReading.memory : null, 'gb');
+  lastReading.memory = used;
   $('memory-detail').textContent = `${GB(memory.total)} GB en total · ${GB(memory.free)} GB disponibles`;
 }
 function filterLists() {
@@ -225,9 +248,8 @@ function render() {
   const total = validDisks.reduce((n, d) => n + Number(d.Size), 0), free = validDisks.reduce((n, d) => n + Number(d.FreeSpace), 0);
   metric('disk-value', total ? GB(free) : '—', 'GB'); $('disk-bar').value = total ? (total - free) / total * 100 : 0;
   $('disk-detail').textContent = total ? `Libres de ${GB(total)} GB · ${validDisks.length} ${validDisks.length === 1 ? 'unidad' : 'unidades'}` : 'Windows no proporcionó datos';
-  $('cpu-bar').closest('.metric').classList.toggle('high', (cpu ?? 0) > 80);
-  $('memory-bar').closest('.metric').classList.toggle('high', (s.memory.total - s.memory.free) / s.memory.total > .85);
-  $('disk-bar').closest('.metric').classList.toggle('high', total > 0 && free / total < .15);
+  metricStatus('disk', total ? (total - free) / total * 100 : null, 85, 95, total && lastReading.disk != null ? free - lastReading.disk : null, 'gb');
+  if (total) lastReading.disk = free;
   $('last-scan').textContent = `Última lectura${s.errors.length ? ' parcial' : ' completa'} · ${new Date(s.at).toLocaleTimeString('es-ES')}`;
   $('hero-description').textContent = s.errors.length ? 'Algunas lecturas no se pudieron completar. Lo que sí he leído ya está ordenado por prioridad.' : 'Ya conozco tu equipo. He ordenado lo que más te conviene revisar primero.';
   $('scan-status').textContent = s.errors.length ? 'Análisis parcial · nada se ha modificado.' : 'Análisis completado · nada se ha modificado.';
@@ -256,7 +278,46 @@ const scanExperience = window.createScanExperience({
     novaSpace.classList.remove('nova-travelling'); slot.append(novaSpace);
   },
   returnNova() { (view === 'overview' ? novaHome : novaDock).append(novaSpace); },
-  navigate: show
+  navigate: v => v === 'scan' ? setTimeout(() => analyze(true), 0) : show(v),
+  nova,
+  fixable: item => item.view === 'cleanup' || Boolean(item.changes && Object.keys(item.changes).some(key => !isLocked(key))),
+  async prepareFix(items) {
+    if (operating) throw Error('Ya hay una operación en curso.');
+    const changes = Object.assign({}, ...items.filter(i => i.changes).map(i => Object.fromEntries(Object.entries(i.changes).filter(([key]) => !isLocked(key)))));
+    const wantsCleanup = items.some(i => i.view === 'cleanup');
+    const prepared = Object.keys(changes).length ? await call('preview', changes) : null;
+    const cleanupPlan = wantsCleanup ? await call('cleanupPreview') : null;
+    const categories = cleanupPlan ? cleanupPlan.categories.filter(c => c.available && c.bytes > 0) : [];
+    const lines = [
+      ...(prepared?.changes || []).map(c => ({ label: c.label, detail: `${c.beforeLabel} → ${c.afterLabel}` })),
+      ...categories.map(c => ({ label: `Borrar: ${c.label}`, detail: `${GB(c.bytes)} GB · ${c.files.toLocaleString('es-ES')} ${c.id === 'recycle' ? 'elementos' : 'archivos'}` }))
+    ];
+    if (!lines.length) throw Error('Ya está todo como debería. No hay nada que cambiar.');
+    return { lines, async run(step) {
+      let fixed = 0, freed = 0, applied = 0; const errors = [];
+      setOperating(true, 'Arreglando');
+      const settingItems = items.filter(i => i.changes), cleanItems = items.filter(i => i.view === 'cleanup');
+      try {
+        if (prepared?.changes.length) {
+          settingItems.forEach(i => step(i, 'working'));
+          try { applied = (await call('apply', prepared.token)).changed; settingItems.forEach(i => { step(i, 'fixed'); fixed++; }); }
+          catch (e) { errors.push(e.message); settingItems.forEach(i => step(i, 'failed')); }
+        } else settingItems.forEach(i => { step(i, 'fixed'); fixed++; });
+        for (const item of cleanItems) {
+          step(item, 'working');
+          try { const r = await call('cleanupRun', cleanupPlan.token, categories.map(c => c.id)); freed = r.freed; step(item, 'fixed'); fixed++; }
+          catch (e) { errors.push(e.message); step(item, 'failed'); }
+        }
+      } finally { setOperating(false); }
+      nova.react(errors.length ? 'error' : 'success');
+      window.starRefreshCleanup?.();
+      analyze(); loadHistory();
+      const chips = [];
+      if (applied) chips.push(`${applied} ${applied === 1 ? 'ajuste aplicado' : 'ajustes aplicados'}`);
+      if (freed) chips.push(`${GB(freed)} GB liberados`);
+      return { fixed, chips, message: errors.length ? errors.join(' ') : applied ? 'Comprobado en Windows. Puedes deshacer los ajustes desde Historial.' : 'Comprobado en Windows.' };
+    } };
+  }
 });
 // Keep the optimization goal explicit. The scan itself never changes Windows.
 const modePicker = document.createElement('label');
@@ -338,7 +399,7 @@ async function performAnalysis(interactive = false) {
   let completed = false;
   $('toast').hidden = true;
   if (interactive) scanExperience.open();
-  $('scan').disabled = true; $('scan').textContent = 'Analizando…';
+  $('scan').disabled = true; $('scan').setAttribute('aria-busy', 'true'); $('scan').textContent = 'Analizando…';
   document.body.classList.add('scanning'); nova.working(true);
   $('scan-status').textContent = 'Consultando Windows. Puede tardar unos segundos.';
   clearTimeout(liveTimer);
@@ -351,7 +412,7 @@ async function performAnalysis(interactive = false) {
     return true;
   } catch (e) { $('scan-status').textContent = 'No se pudo completar el análisis. Puedes reintentarlo.'; if (interactive) scanExperience.fail(e.message); toast(e.message); return false; }
   finally {
-    $('scan').disabled = false; $('scan').textContent = 'Volver a analizar ↻';
+    $('scan').disabled = false; $('scan').removeAttribute('aria-busy'); $('scan').textContent = 'Volver a analizar ↻';
     document.body.classList.remove('scanning');
     if (!operating) { nova.working(false); nova.react(completed ? 'success' : 'error'); }
     scheduleLive();
