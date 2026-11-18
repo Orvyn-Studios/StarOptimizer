@@ -56,18 +56,22 @@ window.createScanExperience = function ({ takeNova, returnNova, navigate, nova, 
   const cleanTitle = t => { const r = String(t).replace(/^Opcional(?: [^:]*)?:\s*/, ''); return r.charAt(0).toUpperCase() + r.slice(1); };
   const firstSentence = t => (String(t).match(/^[^.]*\./) || [t])[0];
   let fixing = false;
+  const optional = item => item.priority === 3; // priorities.js marks every optional preference as 3.
   /* The plan: what was found, as a checklist. Fixable rows are pre-selected; the rest link to their view. */
   function showPlan(items, partial) {
     const fixes = items.filter(fixable), checks = items.filter(i => !fixable(i));
-    setStage('done', partial ? 'Plan con lecturas pendientes.' : fixes.length ? 'Este es tu plan.' : items.length ? 'Hay cosas que revisar.' : 'Todo en orden.',
+    // Optional preferences (Extreme-mode visuals, "plug in the charger") are not problems.
+    const onlyOptional = !fixes.length && items.length && items.every(optional);
+    setStage('done', partial ? 'Plan con lecturas pendientes.' : fixes.length ? 'Este es tu plan.' : onlyOptional ? 'Tu equipo está bien.' : items.length ? 'Hay cosas que revisar.' : 'Todo en orden.',
       fixes.length ? 'Marca lo que quieras arreglar. Antes de tocar nada verás exactamente qué cambia.'
+        : onlyOptional ? 'No hay nada que arreglar. Te dejo algunas sugerencias opcionales por si quieres verlas.'
         : items.length ? 'No hay nada que arreglar automáticamente; abre cada punto para verlo.'
         : `No hemos encontrado nada que arreglar${partial ? ' en los datos que se pudieron leer' : ''}. Tu equipo no se ha modificado.`);
     dialog.dataset.view = 'plan';
     const summary = $('scan-summary'); summary.replaceChildren(); summary.hidden = false;
     const list = el('ul', null, 'plan-list'); list.id = 'plan-list';
     items.forEach((item, i) => {
-      const li = el('li', null, 'plan-item'); li.style.setProperty('--i', i); li.dataset.state = 'todo';
+      const li = el('li', null, `plan-item${optional(item) ? ' plan-optional' : ''}`); li.style.setProperty('--i', i); li.dataset.state = 'todo';
       const canFix = fixable(item);
       const mark = el('span', null, 'plan-mark');
       if (canFix) { const box = el('input'); box.type = 'checkbox';

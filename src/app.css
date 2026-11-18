@@ -149,6 +149,10 @@ progress::-webkit-progress-bar { background: var(--surface-2); border-radius: 6p
 progress::-webkit-progress-value { border-radius: 6px; background: linear-gradient(90deg, var(--accent-2), var(--accent)); transition: width .8s var(--ease); }
 .metric > p { margin: 12px 0 0; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .metric.high progress::-webkit-progress-value { background: linear-gradient(90deg, var(--warn), var(--bad)); }
+.metric-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.metric-link svg { width: 14px; height: 14px; transition: transform .2s var(--ease); }
+.metric-link:hover svg { transform: translateX(3px); }
+.metric-link[hidden] { display: none; }
 .bottom-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .quick-card { display: flex; align-items: center; gap: 14px; padding: 18px; text-align: left; color: var(--text); }
 .quick-card:hover { border-color: var(--accent-line); transform: translateY(-2px); box-shadow: var(--shadow), 0 12px 30px color-mix(in srgb, var(--accent) 10%, transparent); }
@@ -434,6 +438,7 @@ body.simple::before, .simple .hero::after { display: none; }
 .plan-mark { width: 22px; height: 22px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; position: relative; }
 .plan-mark input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
 .plan-item:not([data-fix]) .plan-mark::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+.plan-item.plan-optional:not([data-fix]) .plan-mark::before { background: var(--faint); } /* a suggestion, not a problem */
 .plan-item[data-state="working"] { border-color: var(--accent-line); }
 .plan-item[data-state="working"] .plan-mark input, .plan-item[data-state="fixed"] .plan-mark input, .plan-item[data-state="failed"] .plan-mark input { opacity: 0; }
 .plan-item[data-state="working"] .plan-mark::after { content: ''; position: absolute; inset: 1px; border-radius: 50%; border: 2px solid var(--accent-line); border-top-color: var(--accent); animation: spin .7s linear infinite; }
@@ -511,8 +516,9 @@ body.simple::before, .simple .hero::after { display: none; }
 #scan-dialog:is([data-view="plan"], [data-view="confirm"], [data-view="fixing"]) #scan-summary { margin-top: 14px; }
 
 /* Overview: the hero already says it, so drop the repeated page title and keep the status pill. */
-main:has(#overview:not([hidden])) .heading { justify-content: flex-end; margin-bottom: 14px; }
-main:has(#overview:not([hidden])) .heading > div { display: none; }
+/* Overview has its own hero; the page heading would only leave an empty band. */
+main:has(#overview:not([hidden])) .heading { display: none; }
+main:has(#overview:not([hidden])) #overview { padding-top: 28px; }
 #scan-dialog:is([data-view="plan"], [data-view="confirm"], [data-view="fixing"]) .nova-shadow { display: none; }
 
 /* ---------- Scan: calmer Nova and an open book with turning pages ---------- */

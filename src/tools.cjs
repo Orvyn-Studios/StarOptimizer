@@ -175,7 +175,7 @@ function createCleanup(directory, { run = ps, env = process.env, now = Date.now 
       const { bytes, files } = await measureTarget(t);
       if (!files && t.process) continue; // App not installed or nothing cached.
       const busy = t.process && running.includes(t.process);
-      categories.push({ id: t.id, label: t.label, detail: t.detail, bytes, files, available: files > 0 && !busy, reason: busy ? `Cierra ${t.label.replace('Caché de ', '')} para limpiar su caché de forma segura.` : files ? null : 'Nada que limpiar.' });
+      categories.push({ id: t.id, label: t.label, detail: t.detail, bytes, files, available: files > 0 && !busy, busy: Boolean(busy), process: t.process || null, reason: busy ? `Cierra ${t.label.replace('Caché de ', '')} para limpiar su caché. Se activará sola en cuanto lo cierres.` : files ? null : 'Nada que limpiar.' });
     }
     try {
       const bin = await recycleBin(run);
@@ -218,7 +218,11 @@ function createCleanup(directory, { run = ps, env = process.env, now = Date.now 
     await fs.writeFile(logFile + '.tmp', JSON.stringify(history.slice(0, 100), null, 2)); await fs.rename(logFile + '.tmp', logFile);
     return { freed, removed, skipped, done, totalFreed: history.reduce((n, e) => n + e.freed, 0) };
   }
-  return { preview, clean, log };
+  // Cheap check (no file walk) so the view can notice when a browser is closed.
+  async function busy() {
+    return runningProcesses(cleanupTargets(env).filter(t => t.process).map(t => t.process), run);
+  }
+  return { preview, clean, log, busy };
 }
 
 module.exports = { classifyDevice, deviceHint, parseBatteryReport, batteryReport, startupEnabled, startupApps, setStartup, readToggles, setToggle, extendAdapter, cleanupTargets, walk, createCleanup };

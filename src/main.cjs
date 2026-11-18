@@ -48,6 +48,7 @@ else {
     handle('startupApps', () => tools.startupApps());
     handle('setStartup', (name, enabled) => mutate(() => tools.setStartup(name, enabled)));
     handle('cleanupPreview', () => cleanup.preview());
+    handle('cleanupBusy', () => cleanup.busy());
     handle('cleanupRun', (token, ids) => mutate(() => cleanup.clean(token, ids)));
     handle('undo', id => mutate(() => optimizer.undo(id)));
     handle('telemetry', async () => {

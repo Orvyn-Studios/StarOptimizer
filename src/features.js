@@ -147,6 +147,7 @@
       list.append(label);
     }
     updateCleanupButton();
+    watchBusy();
   }
   async function scanCleanup() {
     if (cleaning) return;
@@ -180,6 +181,25 @@
     await scanCleanup();
     if (snapshot) analyze();
   });
+
+  /* While a browser blocks its cache and the view is open, notice when it closes. */
+  let busyTimer = null;
+  function watchBusy() {
+    clearTimeout(busyTimer);
+    const waiting = cleanupPlan?.categories.filter(c => c.busy && c.process) || [];
+    if (!waiting.length || cleaning || $('cleanup').hidden || document.hidden) return;
+    busyTimer = setTimeout(async () => {
+      let running; try { running = await call('cleanupBusy'); } catch { return watchBusy(); }
+      const freed = waiting.filter(c => !running.includes(c.process));
+      if (freed.length && !cleaning && !operating) {
+        await scanCleanup();
+        const ready = cleanupPlan?.categories.filter(c => freed.some(f => f.id === c.id) && c.available) || [];
+        if (ready.length) { toast(`${ready.map(c => c.label).join(' y ')}: ya se puede limpiar (${size(ready.reduce((n, c) => n + c.bytes, 0))}).`); nova.react('success'); }
+      } else watchBusy();
+    }, 4000);
+  }
+  document.addEventListener('visibilitychange', watchBusy);
+  new MutationObserver(watchBusy).observe($('cleanup'), { attributes: true, attributeFilter: ['hidden'] });
 
   window.starRefreshCleanup = () => { if (!cleaning) scanCleanup(); };
   /* ---------- Snapshot hook ---------- */

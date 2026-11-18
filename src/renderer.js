@@ -228,6 +228,8 @@ function renderTelemetry(cpu, memory) {
   metricStatus('memory', used / memory.total * 100, 75, 90, lastReading.memory != null ? used - lastReading.memory : null, 'gb');
   lastReading.memory = used;
   $('memory-detail').textContent = `${GB(memory.total)} GB en total · ${GB(memory.free)} GB disponibles`;
+  // Same 75 % threshold that turns the card "Alto": give the warning a next step.
+  $('memory-link').hidden = !(used / memory.total * 100 >= 75);
 }
 function filterLists() {
   if (!snapshot) return;

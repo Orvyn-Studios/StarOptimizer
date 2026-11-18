@@ -25,7 +25,7 @@ const fs = require('node:fs/promises');
     }
     const security = await page.evaluate(() => ({ node: typeof require, process: typeof process, bridge: Object.keys(window.star) }));
     assert.equal(security.node, 'undefined'); assert.equal(security.process, 'undefined');
-    assert.deepEqual(security.bridge.sort(), ['apply', 'battery', 'cleanupPreview', 'cleanupRun', 'device', 'export', 'history', 'measure', 'measurements', 'onBusyClose', 'preview', 'scan', 'setStartup', 'settings', 'startupApps', 'telemetry', 'undo']);
+    assert.deepEqual(security.bridge.sort(), ['apply', 'battery', 'cleanupBusy', 'cleanupPreview', 'cleanupRun', 'device', 'export', 'history', 'measure', 'measurements', 'onBusyClose', 'preview', 'scan', 'setStartup', 'settings', 'startupApps', 'telemetry', 'undo']);
     const rejected = await page.evaluate(() => window.star.settings('https://example.com'));
     assert.equal(rejected.ok, false);
     await page.click('[data-view="recommendations"]');

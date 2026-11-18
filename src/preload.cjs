@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('star', Object.freeze({
   startupApps: () => ipcRenderer.invoke('startupApps'),
   setStartup: (name, enabled) => ipcRenderer.invoke('setStartup', name, enabled),
   cleanupPreview: () => ipcRenderer.invoke('cleanupPreview'),
+  cleanupBusy: () => ipcRenderer.invoke('cleanupBusy'),
   cleanupRun: (token, ids) => ipcRenderer.invoke('cleanupRun', token, ids),
   onBusyClose: callback => { ipcRenderer.on('operation-running', () => callback()); }
 }));
