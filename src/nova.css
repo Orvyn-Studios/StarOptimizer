@@ -73,3 +73,6 @@ body:not(.dark) .nova-shadow { opacity: .14; }
 @keyframes nova-read { 0%, 100% { translate: -9px 2px; } 45% { translate: 9px 2px; } 50% { translate: 9px 4px; } 55%, 95% { translate: -9px 4px; } }
 @media (prefers-reduced-motion: reduce) { #nova-space * { animation: none !important; transition: none !important; } }
 @media (max-width: 1020px) { #nova-dock { right: 10px; bottom: 8px; } }
+/* The dock draws Nova at .42 scale, but the button keeps its 223px layout box; pull that box
+   back to the dock size so the scaled mascot sits inside the dock instead of below the screen. */
+#nova-dock .nova-button { margin: -59.5px; }
