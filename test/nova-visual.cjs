@@ -6,7 +6,7 @@ const path = require('node:path');
   const app = await electron.launch({ args: [path.join(__dirname, '..')], env });
   try {
     const page = await app.firstWindow();
-    await page.waitForSelector('#nova');
+    await page.waitForSelector('#nova'); await page.evaluate(() => document.getElementById('device-dialog')?.close());
     await page.evaluate(() => { document.body.classList.remove('simple'); nova.context({ simple: false }); });
     const before = await page.locator('#nova').boundingBox();
     await page.evaluate(() => show('history'));

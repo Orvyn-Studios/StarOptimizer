@@ -8,7 +8,7 @@ const path = require('node:path');
   try {
     const page = await app.firstWindow(); const errors = [];
     page.on('pageerror', e => errors.push(e.message));
-    await page.waitForSelector('#nova');
+    await page.waitForSelector('#nova'); await page.evaluate(() => document.getElementById('device-dialog')?.close());
     const wasSimple = await page.locator('body').evaluate(el => el.classList.contains('simple'));
     if (wasSimple) await page.click('#appearance');
     const time = new Date('2026-09-08T00:00:00Z');
@@ -22,7 +22,7 @@ const path = require('node:path');
         return original.apply(this, args);
       };
     });
-    await page.reload(); await page.waitForSelector('#nova');
+    await page.reload(); await page.waitForSelector('#nova'); await page.evaluate(() => document.getElementById('device-dialog')?.close());
     const origin = await page.evaluate(() => performance.now());
     await page.clock.runFor(9999);
     assert.equal(await page.evaluate(() => novaAnimationCalls.length), 0, 'no early blink');

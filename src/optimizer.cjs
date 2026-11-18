@@ -2,7 +2,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const GUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
-const labels = { power: 'Plan de energía', animations: 'Animaciones de interfaz', menuAnimation: 'Animaciones de menús', comboAnimation: 'Animaciones de listas' };
+const labels = { power: 'Plan de energía', animations: 'Animaciones de interfaz', menuAnimation: 'Animaciones de menús', comboAnimation: 'Animaciones de listas', transparency: 'Efectos de transparencia', gameMode: 'Modo Juego' };
 const active = entry => ['pending', 'applied', 'recovering', 'recovery-needed'].includes(entry.status);
 const valid = (key, value) => key === 'power' ? typeof value === 'string' && GUID.test(value) : Object.hasOwn(labels, key) && typeof value === 'boolean';
 function createOptimizer(directory, adapter, now = Date.now) {
@@ -35,7 +35,7 @@ function createOptimizer(directory, adapter, now = Date.now) {
     try { return await fn(); } finally { busy = false; }
   }
   async function preview(selection) {
-    if (!selection || typeof selection !== 'object' || Array.isArray(selection) || Object.keys(selection).length > 4 || Object.entries(selection).some(([key, value]) => !valid(key, value))) throw Error('Selección no válida.');
+    if (!selection || typeof selection !== 'object' || Array.isArray(selection) || Object.keys(selection).length > Object.keys(labels).length || Object.entries(selection).some(([key, value]) => !valid(key, value))) throw Error('Selección no válida.');
     const entries = await history();
     if (entries.some(e => active(e) && e.status !== 'applied')) throw Error('Hay una recuperación pendiente. Resuélvela desde Historial antes de continuar.');
     const state = await adapter.snapshot();
@@ -45,7 +45,7 @@ function createOptimizer(directory, adapter, now = Date.now) {
       if (key === 'power' && !state.plans.some(p => p.id === after)) throw Error('El plan seleccionado ya no existe.');
       if (before === after) return [];
       if (entries.some(e => active(e) && e.changes.some(c => c.key === key && c.state !== 'restored'))) throw Error(`Restaura primero el cambio anterior de ${labels[key].toLowerCase()} desde Historial.`);
-      const describe = value => key === 'power' ? state.plans.find(p => p.id === value)?.name || value : value ? 'Activadas' : 'Desactivadas';
+      const describe = value => key === 'power' ? state.plans.find(p => p.id === value)?.name || value : value ? 'Activado' : 'Desactivado';
       return [{ key, label: labels[key], before, after, beforeLabel: describe(before), afterLabel: describe(after), state: 'planned' }];
     });
     for (const [token, value] of tokens) if (now() - value.created > 300000) tokens.delete(token);

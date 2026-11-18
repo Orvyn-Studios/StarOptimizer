@@ -13,7 +13,7 @@ const os = require('node:os');
   try {
     const page = await app.firstWindow();
     const errors = []; page.on('pageerror', e => errors.push(e.message));
-    await page.waitForSelector('#scan');
+    await page.waitForSelector('#scan'); await page.evaluate(() => document.getElementById('device-dialog')?.close());
     await app.evaluate(async ({ app, ipcMain }, directory) => {
       const requireModule = process.getBuiltinModule('module').createRequire(app.getAppPath() + '/package.json');
       const { createOptimizer } = requireModule('./src/optimizer.cjs');

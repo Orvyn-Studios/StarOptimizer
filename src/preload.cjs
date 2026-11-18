@@ -10,5 +10,11 @@ contextBridge.exposeInMainWorld('star', Object.freeze({
   undo: id => ipcRenderer.invoke('undo', id),
   settings: key => ipcRenderer.invoke('settings', key),
   export: () => ipcRenderer.invoke('export'),
+  device: () => ipcRenderer.invoke('device'),
+  battery: () => ipcRenderer.invoke('battery'),
+  startupApps: () => ipcRenderer.invoke('startupApps'),
+  setStartup: (name, enabled) => ipcRenderer.invoke('setStartup', name, enabled),
+  cleanupPreview: () => ipcRenderer.invoke('cleanupPreview'),
+  cleanupRun: (token, ids) => ipcRenderer.invoke('cleanupRun', token, ids),
   onBusyClose: callback => { ipcRenderer.on('operation-running', () => callback()); }
 }));

@@ -8,7 +8,7 @@ const fs = require('node:fs/promises');
   const app = await electron.launch({ ...launch, env });
   try {
     const page = await app.firstWindow(); const errors = []; page.on('pageerror', error => errors.push(error.message));
-    await page.waitForSelector('#scan'); await fs.mkdir('artifacts', { recursive: true });
+    await page.waitForSelector('#scan'); await page.evaluate(() => document.getElementById('device-dialog')?.close()); await fs.mkdir('artifacts', { recursive: true });
     assert.equal(await page.locator('[data-view="recommended"]').isDisabled(), true);
     await page.screenshot({ path: 'artifacts/dashboard-before.png', animations: 'disabled' });
     await page.click('#scan');
@@ -19,13 +19,13 @@ const fs = require('node:fs/promises');
     await page.click('#scan-return');
     assert.equal(await page.locator('[data-view="recommended"]').isEnabled(), true);
     await page.screenshot({ path: 'artifacts/dashboard.png', animations: 'disabled' });
-    for (const view of ['recommendations', 'recommended', 'tuneup', 'startup', 'processes', 'history']) {
+    for (const view of ['recommendations', 'recommended', 'cleanup', 'tuneup', 'startup', 'processes', 'history']) {
       await page.click(`[data-view="${view}"]`);
       assert.equal(await page.locator(`#${view}`).isVisible(), true);
     }
     const security = await page.evaluate(() => ({ node: typeof require, process: typeof process, bridge: Object.keys(window.star) }));
     assert.equal(security.node, 'undefined'); assert.equal(security.process, 'undefined');
-    assert.deepEqual(security.bridge.sort(), ['apply', 'export', 'history', 'measure', 'measurements', 'onBusyClose', 'preview', 'scan', 'settings', 'telemetry', 'undo']);
+    assert.deepEqual(security.bridge.sort(), ['apply', 'battery', 'cleanupPreview', 'cleanupRun', 'device', 'export', 'history', 'measure', 'measurements', 'onBusyClose', 'preview', 'scan', 'setStartup', 'settings', 'startupApps', 'telemetry', 'undo']);
     const rejected = await page.evaluate(() => window.star.settings('https://example.com'));
     assert.equal(rejected.ok, false);
     await page.click('[data-view="recommendations"]');

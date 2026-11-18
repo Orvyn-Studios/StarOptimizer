@@ -5,7 +5,7 @@ const path = require('node:path');
   const env = { ...process.env }; delete env.ELECTRON_RUN_AS_NODE;
   const app = await electron.launch({ args: [path.join(__dirname, '..')], env });
   try {
-    const page = await app.firstWindow(); await page.waitForSelector('#scan');
+    const page = await app.firstWindow(); await page.waitForSelector('#scan'); await page.evaluate(() => document.getElementById('device-dialog')?.close());
     const errors = []; page.on('pageerror', e => errors.push(e.message));
     await app.evaluate(({ ipcMain }) => {
       ipcMain.removeHandler('scan');

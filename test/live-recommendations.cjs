@@ -4,7 +4,7 @@ const assert = require('node:assert/strict'); const path = require('node:path');
  const env={...process.env}; delete env.ELECTRON_RUN_AS_NODE;
  const app=await electron.launch({args:[path.join(__dirname,'..')],env});
  try {
-  const page=await app.firstWindow(); await page.waitForSelector('#scan');
+  const page=await app.firstWindow(); await page.waitForSelector('#scan'); await page.evaluate(() => document.getElementById('device-dialog')?.close());
   await page.waitForFunction(()=>typeof analyze==='function');
   const errors=[]; page.on('pageerror',e=>errors.push(e.message));
   await app.evaluate(({ipcMain})=>{

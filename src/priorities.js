@@ -1,7 +1,9 @@
 /* Recommendations are observations from a completed snapshot, never assumed faults. */
 (function (root) {
-  function priorities(s, mode = 'intelligent') {
+  const GiB = 1073741824;
+  function priorities(s, mode = 'intelligent', device = null) {
     if (!['intelligent', 'gaming', 'extreme'].includes(mode)) mode = 'intelligent';
+    if (!['laptop', 'desktop'].includes(device)) device = null;
     if (!s) return [];
     const list = [], errors = s.errors || [];
     const add = (priority, title, evidence, action, view, badge) => list.push({ priority, title, evidence, action, view, badge });
@@ -46,11 +48,25 @@
     if (mode !== 'intelligent' && isAc && !errors.includes('plans') && readable('power') && highAvailable && currentAvailable && power !== high) {
       list.push({ priority: 3, title: `Opcional (${modeName}): plan Alto rendimiento`, evidence: 'El equipo está conectado a corriente y Windows dispone de Alto rendimiento. No garantiza más FPS; puede aumentar temperatura, ruido y consumo. Se aplicará solo tras confirmación.', action: 'Revisar plan de energía', view: 'recommendations', changes: { power: high } });
     }
+    if (mode !== 'intelligent' && readable('gameMode') && s.configuration?.values?.gameMode === false)
+      list.push({ priority: 3, title: `Opcional (${modeName}): activar Modo Juego`, evidence: 'Está desactivado en Windows. Con él activo, Windows da prioridad al juego en primer plano y aplaza actualizaciones durante la partida.', action: 'Revisar Modo Juego', view: 'recommendations', changes: { gameMode: true } });
     if (mode === 'extreme') {
-      const changes = Object.fromEntries(['animations', 'menuAnimation', 'comboAnimation']
+      const changes = Object.fromEntries(['animations', 'menuAnimation', 'comboAnimation', 'transparency']
         .filter(key => readable(key) && s.configuration?.values?.[key] === true).map(key => [key, false]));
       if (Object.keys(changes).length) list.push({ priority: 3, title: 'Opcional (Extremo): reducir efectos de Windows', evidence: 'Es una preferencia del modo Extremo, no una avería detectada. Puede hacer que los menús parezcan más inmediatos; no aumenta necesariamente los FPS ni libera RAM.', action: 'Revisar efectos visuales', view: 'recommendations', changes });
     }
+    // Space that can actually be reclaimed, measured file by file.
+    if (Number.isFinite(s.cleanup?.bytes) && s.cleanup.bytes >= GiB)
+      add(2, `Liberar ${(s.cleanup.bytes / GiB).toLocaleString('es-ES', { maximumFractionDigits: 1 })} GB de temporales y cachés`, 'Medido en tu equipo: temporales antiguos, cachés de navegador y papelera. Revisarás la lista antes de borrar nada.', 'Liberar espacio', 'cleanup', 'Espacio recuperable');
+    if (device === 'laptop') {
+      const worst = Array.isArray(s.battery) && s.battery.length ? Math.min(...s.battery.map(b => b.health).filter(Number.isFinite)) : null;
+      if (Number.isFinite(worst) && worst < 80)
+        add(worst < 60 ? 1 : 2, `La batería conserva el ${worst} % de su capacidad`, `Según el informe de Windows, la carga completa actual es el ${worst} % de la original. Es desgaste normal con el uso; evita el calor y, si tu fabricante lo ofrece, limita la carga al 80 %.`, 'Ver batería', 'processes', 'Batería');
+      if (mode !== 'intelligent' && s.onBattery === true)
+        list.push({ priority: 3, title: 'Conecta el cargador para rendir al máximo', evidence: 'Estás usando batería. La mayoría de portátiles limitan el procesador y la gráfica en batería para ahorrar energía.', action: 'Ver ajustes de energía', view: 'recommendations', badge: 'Portátil' });
+    }
+    if (device === 'laptop' && mode === 'intelligent' && s.onBattery === true && readable('transparency') && s.configuration?.values?.transparency === true)
+      list.push({ priority: 3, title: 'Opcional en batería: quitar transparencias', evidence: 'Las transparencias de Windows hacen trabajar a la gráfica de forma continua. Desactivarlas ayuda un poco a la autonomía; es reversible.', action: 'Revisar transparencias', view: 'recommendations', changes: { transparency: false } });
     return list.sort((a, b) => a.priority - b.priority);
   }
   if (typeof module !== 'undefined') module.exports = priorities;

@@ -6,7 +6,7 @@ const assert = require('node:assert/strict'), path = require('node:path'), os = 
   const launch = process.argv[2] ? { executablePath: path.resolve(process.argv[2]), args: [`--user-data-dir=${dir}`] } : { args: [path.join(__dirname,'..'),`--user-data-dir=${dir}`] };
   let app=await electron.launch({...launch,env});
   try {
-    let page=await app.firstWindow(); await page.waitForSelector('#measure-before',{state:'attached'});
+    let page=await app.firstWindow(); await page.waitForSelector('#measure-before',{state:'attached'}); await page.evaluate(() => document.getElementById('device-dialog')?.close());
     assert.equal(await page.locator('#measure-before').isDisabled(),true);
     assert.equal((await page.evaluate(()=>window.star.measure('invalid'))).ok,false);
     await page.evaluate(()=>analyze()); await page.click('[data-view="tuneup"]');
@@ -17,7 +17,7 @@ const assert = require('node:assert/strict'), path = require('node:path'), os = 
     assert.equal((await page.evaluate(()=>window.star.measure('before'))).ok,false);
     await page.waitForFunction(()=>document.querySelector('#measurement-status').textContent.includes('Medición guardada'),{timeout:30000});
     assert.equal((await page.evaluate(()=>window.star.measurements())).data.length,1);
-    await app.close(); app=await electron.launch({...launch,env}); page=await app.firstWindow(); await page.waitForSelector('#measure-before',{state:'attached'});
+    await app.close(); app=await electron.launch({...launch,env}); page=await app.firstWindow(); await page.waitForSelector('#measure-before',{state:'attached'}); await page.evaluate(() => document.getElementById('device-dialog')?.close());
     await page.evaluate(()=>analyze()); await page.click('[data-view="tuneup"]');
     await page.click('#measure-after');
     await page.waitForFunction(()=>document.querySelector('#measurement-status').textContent.includes('Medición guardada'),{timeout:30000});

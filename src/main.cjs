@@ -5,6 +5,7 @@ const { pathToFileURL } = require('node:url');
 const { scan, optimizationAdapter, telemetry } = require('./system.cjs');
 const { createOptimizer } = require('./optimizer.cjs');
 const { createMeasurements } = require('./measurements.cjs');
+const tools = require('./tools.cjs');
 let window, lastScan, scanning, sampling, mutation = false, measuring = false;
 app.setName('StarOptimizer');
 const page = pathToFileURL(path.join(__dirname, 'index.html')).href;
@@ -12,7 +13,8 @@ if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { window?.restore(); window?.focus(); });
   app.whenReady().then(() => {
-    const optimizer = createOptimizer(app.getPath('userData'), optimizationAdapter);
+    const optimizer = createOptimizer(app.getPath('userData'), tools.extendAdapter(optimizationAdapter));
+    const cleanup = tools.createCleanup(app.getPath('userData'));
     const measurements = createMeasurements(app.getPath('userData'), telemetry, async () => ({ onBattery: powerMonitor.isOnBatteryPower(), configuration: await optimizer.state(), cpu: require('node:os').cpus()[0]?.model || 'No disponible' }));
     const handle = (name, fn) => ipcMain.handle(name, async (event, ...args) => {
       if (event.senderFrame !== window.webContents.mainFrame || event.senderFrame.url !== page) throw new Error('Origen no permitido.');
@@ -41,6 +43,12 @@ else {
       try { return await fn(); } finally { mutation = false; }
     };
     handle('apply', token => mutate(() => optimizer.apply(token)));
+    handle('device', () => tools.deviceHint());
+    handle('battery', () => tools.batteryReport());
+    handle('startupApps', () => tools.startupApps());
+    handle('setStartup', (name, enabled) => mutate(() => tools.setStartup(name, enabled)));
+    handle('cleanupPreview', () => cleanup.preview());
+    handle('cleanupRun', (token, ids) => mutate(() => cleanup.clean(token, ids)));
     handle('undo', id => mutate(() => optimizer.undo(id)));
     handle('telemetry', async () => {
       if (measuring) throw Error('Medición en curso.');
@@ -56,7 +64,7 @@ else {
       await fs.writeFile(choice.filePath, JSON.stringify({ ...lastScan, history: await optimizer.history(), measurements: await measurements.history() }, null, 2));
       return true;
     });
-    window = new BrowserWindow({ width: 1200, height: 800, minWidth: 760, minHeight: 560, icon: path.join(__dirname, 'assets/icon.png'), backgroundColor: '#f5f5f7', title: 'StarOptimizer', autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+    window = new BrowserWindow({ width: 1280, height: 840, minWidth: 760, minHeight: 560, icon: path.join(__dirname, 'assets/icon.png'), backgroundColor: '#0a0c13', title: 'StarOptimizer', autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
     window.on('close', event => {
       if (mutation) { event.preventDefault(); window.webContents.send('operation-running'); }
     });

@@ -103,6 +103,35 @@ test('partial configuration only suppresses the unavailable optional settings', 
   assert.deepEqual(priorities(s, 'extreme').filter(x => x.changes), [], 'legacy generic error has no precise availability evidence');
 });
 
+test('device-aware evidence: measured cleanup space and laptop battery wear', () => {
+  const s = normal();
+  s.cleanup = { bytes: 0.4 * 1024 ** 3 };
+  assert.deepEqual(priorities(s, 'intelligent', 'laptop'), [], 'small reclaimable space is not worth a recommendation');
+  s.cleanup.bytes = 6 * 1024 ** 3;
+  assert.match(priorities(s)[0].title, /Liberar 6 GB/);
+  s.cleanup.bytes = 0; s.battery = [{ health: 72 }];
+  assert.deepEqual(priorities(s, 'intelligent', 'desktop'), [], 'desktops ignore battery data');
+  assert.match(priorities(s, 'intelligent', 'laptop')[0].title, /72 %/);
+  s.battery = [{ health: 96 }];
+  assert.deepEqual(priorities(s, 'intelligent', 'laptop'), []);
+});
+test('laptop on battery: gaming advises the charger, intelligent only offers reversible transparency', () => {
+  const s = normal(); s.onBattery = true;
+  s.configuration = { values: { power: balanced, transparency: true, gameMode: true }, plans: [{ id: balanced }] };
+  assert.deepEqual(priorities(s, 'gaming', 'desktop'), []);
+  assert.match(priorities(s, 'gaming', 'laptop')[0].title, /cargador/);
+  assert.deepEqual(priorities(s, 'intelligent', 'laptop').map(x => x.changes), [{ transparency: false }]);
+  s.onBattery = false;
+  assert.deepEqual(priorities(s, 'intelligent', 'laptop'), []);
+});
+test('gaming offers Game Mode only when Windows reports it off', () => {
+  const s = normal(); s.configuration = { values: { gameMode: false }, plans: [] };
+  assert.deepEqual(priorities(s), []);
+  assert.deepEqual(priorities(s, 'gaming').map(x => x.changes), [{ gameMode: true }]);
+  s.configuration.values.gameMode = true;
+  assert.deepEqual(priorities(s, 'gaming'), []);
+});
+
 test('optional modes require a listed current plan and known AC power', () => {
   const s = normal(); const high = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c';
   s.configuration = { values: { power: balanced }, plans: [{ id: high }] };

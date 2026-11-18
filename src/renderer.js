@@ -23,19 +23,23 @@ document.body.append(novaDock);
 let snapshot, journal = [], draft = {}, token, analysisTask, operating = false, toastTimer, liveTimer, view = 'overview';
 const GB = n => (Number(n) / 1073741824).toLocaleString('es-ES', { maximumFractionDigits: 1 });
 const active = e => ['pending', 'applied', 'recovering', 'recovery-needed'].includes(e.status);
+// [title, detail, value StarOptimizer can set, wording when on, wording when off]
 const visual = {
-  animations: ['Reducir animaciones de interfaz', 'Menos movimiento en aplicaciones que respetan este ajuste de Windows.'],
-  menuAnimation: ['Menús más directos', 'Desactiva la transición al abrir menús compatibles.'],
-  comboAnimation: ['Listas sin transiciones', 'Desactiva el efecto de apertura de las listas desplegables compatibles.']
+  animations: ['Reducir animaciones de interfaz', 'Menos movimiento en las ventanas y controles que respetan este ajuste de Windows.', false],
+  menuAnimation: ['Menús más directos', 'Los menús se abren al instante, sin transición.', false],
+  comboAnimation: ['Listas sin transiciones', 'Las listas desplegables se abren sin animación.', false],
+  transparency: ['Quitar transparencias', 'Barra de tareas, Inicio y ventanas opacas. Menos trabajo para la gráfica; útil en batería y equipos modestos.', false],
+  gameMode: ['Activar Modo Juego', 'Windows da prioridad al juego en primer plano y evita instalar actualizaciones mientras juegas.', true]
 };
 const labels = {
-  tuneup: ['Puesta a punto.', 'Un recorrido guiado para ajustar y comprobar el resultado.', 'PREPARAR TU PC.'],
-  recommended: ['Recomendados para tu PC.', 'Una lista de prioridades basada en las lecturas disponibles.', 'EL SIGUIENTE PASO.'],
-  overview: ['Todo en su sitio.', 'El estado de tu equipo y tus ajustes, en un solo lugar.', 'UN POCO MÁS SIMPLE.'],
-  recommendations: ['Ajustes a tu medida.', 'Elige un perfil o prepara tus propios cambios.', 'LA FLUIDEZ EMPIEZA AQUÍ.'],
-  startup: ['Un buen comienzo.', 'Menos aplicaciones al iniciar sesión, más espacio para lo que necesitas.', 'ELIGE QUIÉN TE ACOMPAÑA.'],
-  processes: ['Cada recurso, a la vista.', 'Una lectura de tu equipo para decidir con información.', 'SIN CERRAR TUS PROGRAMAS.'],
-  history: ['Puedes volver atrás.', 'Tus cambios y sus valores originales, guardados en este equipo.', 'TODO BAJO TU CONTROL.']
+  tuneup: ['Puesta a punto.', 'Un recorrido guiado: mide, ajusta y comprueba el resultado.', 'PASO A PASO'],
+  recommended: ['Recomendado para ti.', 'Prioridades basadas en las lecturas reales de tu equipo.', 'TU SIGUIENTE PASO'],
+  overview: ['Todo en su sitio.', 'El estado de tu equipo y tus ajustes, en un solo lugar.', 'VISIÓN GENERAL'],
+  recommendations: ['Ajustes a tu medida.', 'Elige un perfil o prepara tus propios cambios. Todo es reversible.', 'OPTIMIZAR'],
+  cleanup: ['Libera espacio.', 'Temporales, cachés y papelera. Revisas la lista antes de borrar nada.', 'LIMPIEZA'],
+  startup: ['Arranque más rápido.', 'Cada app que no se abre al encender es tiempo y memoria que recuperas.', 'APPS DE INICIO'],
+  processes: ['Cada recurso, a la vista.', 'Qué usa tu memoria, tus discos y tu hardware ahora mismo.', 'RECURSOS'],
+  history: ['Puedes volver atrás.', 'Tus cambios y sus valores originales, guardados en este equipo.', 'HISTORIAL']
 };
 function toast(message) {
   $('toast-message').textContent = message; $('toast').hidden = false;
@@ -73,16 +77,21 @@ function moveNova(next, from = $('nova').getBoundingClientRect()) {
   if (!from.width || !to.width || document.body.classList.contains('simple') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   document.body.append(novaSpace);
   novaSpace.classList.add('nova-travelling');
-  const pose = rect => `translate3d(${rect.left}px,${rect.top}px,0) scale(${rect.width / 223})`;
+  // Travel along an arc: lift, drift across, then settle with a small landing squash.
+  const pose = (rect, lift = 0, grow = 1, turn = 0) => `translate3d(${rect.left}px,${rect.top - lift}px,0) scale(${rect.width / 223 * grow}) rotate(${turn}deg)`;
+  const mid = { left: (from.left + to.left) / 2, top: Math.min(from.top, to.top), width: (from.width + to.width) / 2 };
+  const direction = to.left > from.left ? 1 : -1;
   const flight = novaSpace.animate([
-    { transform: pose(from) },
-    { transform: pose(to) }
-  ], { duration: 1050, easing: 'cubic-bezier(.4,0,.18,1)', fill: 'both' });
+    { transform: pose(from), offset: 0 },
+    { transform: pose(from, 18, 1.04, -4 * direction), offset: .14, easing: 'cubic-bezier(.45,0,.2,1)' },
+    { transform: pose(mid, 70, 1.02, 8 * direction), offset: .55, easing: 'cubic-bezier(.3,0,.25,1)' },
+    { transform: pose(to), offset: 1 }
+  ], { duration: 980, easing: 'linear', fill: 'both' });
   novaFlight = flight;
   flight.finished.then(() => {
     if (novaFlight !== flight) return;
     target.append(novaSpace); novaSpace.classList.remove('nova-travelling');
-    flight.cancel(); novaFlight = null;
+    flight.cancel(); novaFlight = null; nova.land?.();
   }).catch(() => {});
 }
 function show(next) {
@@ -128,15 +137,16 @@ function renderConfiguration() {
   select.disabled = !plans.length || isLocked('power');
   $('power-note').textContent = isLocked('power') ? 'Restaura el cambio anterior desde Historial para elegir otro plan.' : snapshot.onBattery ? 'Estás usando batería. Un plan exigente puede reducir la autonomía.' : 'Solo activamos planes existentes. Sus valores internos no se modifican.';
   const container = $('visual-options'); container.replaceChildren();
-  for (const [key, [title, detail]] of Object.entries(visual)) {
+  for (const [key, [title, detail, goal]] of Object.entries(visual)) {
+    if (!(key in values)) continue;
     const unavailable = typeof values[key] !== 'boolean';
     const locked = isLocked(key);
     const label = node('label', undefined, `visual-option${unavailable ? ' unavailable' : ''}`);
     const input = node('input'); input.type = 'checkbox'; input.id = `option-${key}`;
-    input.checked = (draft[key] ?? values[key]) === false;
-    input.disabled = unavailable || locked || values[key] === false;
-    const copy = node('span'); copy.append(node('strong', title), node('small', detail), node('em', unavailable ? 'No disponible en este equipo' : locked ? 'Guardado en Historial · puedes restaurarlo' : values[key] === false ? 'Ya está desactivada en Windows' : 'Ahora está activada en Windows'));
-    input.addEventListener('change', () => { draft[key] = !input.checked; clearProfile(); selectionCount(); });
+    input.checked = (draft[key] ?? values[key]) === goal;
+    input.disabled = unavailable || locked || values[key] === goal;
+    const copy = node('span'); copy.append(node('strong', title), node('small', detail), node('em', unavailable ? 'No disponible en este equipo' : locked ? 'Guardado en Historial · puedes restaurarlo' : values[key] === goal ? 'Ya está así en Windows' : `Ahora: ${values[key] ? 'activado' : 'desactivado'}`));
+    input.addEventListener('change', () => { draft[key] = input.checked ? goal : !goal; clearProfile(); selectionCount(); });
     label.append(input, copy); container.append(label);
   }
   selectionCount();
@@ -148,8 +158,9 @@ async function prepareProfile(profile) {
   draft = {}; clearProfile();
   const { plans, values } = snapshot.configuration;
   if (profile === 'fluid') {
-    for (const key of Object.keys(visual)) if (values[key] === true && !isLocked(key)) draft[key] = false;
+    for (const [key, [, , goal]] of Object.entries(visual)) if (goal === false && values[key] === true && !isLocked(key)) draft[key] = false;
   } else {
+    if (profile === 'performance' && values.gameMode === false && !isLocked('gameMode')) draft.gameMode = true;
     const id = profile === 'daily' ? '381b4222-f694-41f0-9685-ff5bb260df2e' : '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c';
     const plan = plans.find(p => p.id === id) || plans.find(p => profile === 'daily' ? /^(equilibrado|balanced)$/i.test(p.name) : /^(alto rendimiento|high performance)$/i.test(p.name));
     if (!plan) toast('Este perfil no tiene un plan compatible en tu equipo. Puedes elegir uno de los planes disponibles.');
@@ -164,7 +175,7 @@ async function prepareProfile(profile) {
 function valueLabel(change, which) {
   if (change[`${which}Label`]) return change[`${which}Label`];
   const value = change[which];
-  return typeof value === 'boolean' ? value ? 'Activadas' : 'Desactivadas' : snapshot?.configuration.plans.find(p => p.id === value)?.name || value;
+  return typeof value === 'boolean' ? value ? 'Activado' : 'Desactivado' : snapshot?.configuration.plans.find(p => p.id === value)?.name || value;
 }
 async function loadHistory() {
   try {
@@ -199,38 +210,41 @@ function filterLists() {
   if (!snapshot) return;
   const list = $('process-list'); list.replaceChildren();
   const query = $('process-search').value.trim().toLocaleLowerCase('es');
-  snapshot.processes.filter(p => p.ProcessName.toLocaleLowerCase('es').includes(query)).forEach(p => list.append(row(p.ProcessName, `${p.Count} ${p.Count === 1 ? 'proceso' : 'procesos'} · memoria residente`, node('span', `${Math.round(p.WorkingSet64 / 1048576).toLocaleString('es-ES')} MB`))));
+  snapshot.processes.filter(p => typeof p?.ProcessName === 'string' && p.ProcessName.toLocaleLowerCase('es').includes(query)).forEach(p => list.append(row(p.ProcessName, `${p.Count} ${p.Count === 1 ? 'proceso' : 'procesos'} · memoria residente`, node('span', `${Math.round(p.WorkingSet64 / 1048576).toLocaleString('es-ES')} MB`))));
   if (!list.children.length) empty(list, snapshot.errors.includes('processes') ? 'Windows no permitió consultar los procesos.' : 'No hay procesos que coincidan con la búsqueda.');
   const startup = $('startup-list'); startup.replaceChildren();
   const startupQuery = $('startup-search').value.trim().toLocaleLowerCase('es');
-  snapshot.startup.filter(p => p.Name.toLocaleLowerCase('es').includes(startupQuery)).forEach(p => startup.append(row(p.Name, p.Location, node('span', 'Revisar en Windows'))));
+  snapshot.startup.filter(p => typeof p?.Name === 'string' && p.Name.toLocaleLowerCase('es').includes(startupQuery)).forEach(p => startup.append(row(p.Name, p.Location || 'Ubicación no disponible', node('span', 'Revisar en Windows'))));
   if (!startup.children.length) empty(startup, snapshot.errors.includes('startup') ? 'Windows no permitió consultar el inicio.' : 'No hay entradas que coincidan con la búsqueda.');
 }
 function render() {
   const s = snapshot, cpu = s.cpu[0]?.LoadPercentage ?? null;
   renderTelemetry(cpu, s.memory);
   $('cpu-detail').textContent = s.cpu[0]?.Name || 'Windows no proporcionó datos'; $('cpu-detail').title = $('cpu-detail').textContent;
-  const total = s.disks.reduce((n, d) => n + Number(d.Size || 0), 0), free = s.disks.reduce((n, d) => n + Number(d.FreeSpace || 0), 0);
-  metric('disk-value', total ? GB(free) : '—', 'GB'); $('disk-bar').value = total ? free / total * 100 : 0;
-  $('disk-detail').textContent = total ? `Libres de ${GB(total)} GB · ${s.disks.length} unidades` : 'Windows no proporcionó datos';
-  $('last-scan').textContent = `Última lectura completa · ${new Date(s.at).toLocaleTimeString('es-ES')}`;
-  $('hero-description').textContent = s.errors.length ? 'Hay lecturas que Windows no ha podido completar. Revisa los resultados disponibles o vuelve a analizar.' : 'Ya conozco un poco mejor tu equipo. Vamos a elegir los ajustes que encajan contigo.';
-  $('scan-status').textContent = s.errors.length ? 'Análisis parcial · Revisa los detalles en Optimizar' : 'Análisis completado. Ningún ajuste modificado por el análisis.';
-  $('machine-status').textContent = s.onBattery ? '◦ Usando batería' : '◦ Conectado a la corriente';
+  const validDisks = s.disks.filter(d => Number(d.Size) > 0 && Number(d.FreeSpace) >= 0);
+  const total = validDisks.reduce((n, d) => n + Number(d.Size), 0), free = validDisks.reduce((n, d) => n + Number(d.FreeSpace), 0);
+  metric('disk-value', total ? GB(free) : '—', 'GB'); $('disk-bar').value = total ? (total - free) / total * 100 : 0;
+  $('disk-detail').textContent = total ? `Libres de ${GB(total)} GB · ${validDisks.length} ${validDisks.length === 1 ? 'unidad' : 'unidades'}` : 'Windows no proporcionó datos';
+  $('cpu-bar').closest('.metric').classList.toggle('high', (cpu ?? 0) > 80);
+  $('memory-bar').closest('.metric').classList.toggle('high', (s.memory.total - s.memory.free) / s.memory.total > .85);
+  $('disk-bar').closest('.metric').classList.toggle('high', total > 0 && free / total < .15);
+  $('last-scan').textContent = `Última lectura${s.errors.length ? ' parcial' : ' completa'} · ${new Date(s.at).toLocaleTimeString('es-ES')}`;
+  $('hero-description').textContent = s.errors.length ? 'Algunas lecturas no se pudieron completar. Lo que sí he leído ya está ordenado por prioridad.' : 'Ya conozco tu equipo. He ordenado lo que más te conviene revisar primero.';
+  $('scan-status').textContent = s.errors.length ? 'Análisis parcial · nada se ha modificado.' : 'Análisis completado · nada se ha modificado.';
+  $('machine-status').replaceChildren(node('i', undefined, 'dot'), document.createTextNode(s.onBattery ? ' Usando batería' : ' Conectado a la corriente'));
   $('go-optimize').hidden = false;
-  $('startup-summary').textContent = `${s.startup.length} entradas reportadas por Windows.`;
   const disks = $('disk-list'); disks.replaceChildren();
-  s.disks.forEach(d => disks.append(row(d.DeviceID, `${GB(d.FreeSpace)} GB libres de ${GB(d.Size)} GB`, node('span', Number(d.Size) ? `${Math.round(d.FreeSpace / d.Size * 100)} % libre` : 'No disponible'))));
+  validDisks.forEach(d => disks.append(row(d.DeviceID, `${GB(d.FreeSpace)} GB libres de ${GB(d.Size)} GB`, node('span', `${Math.round(d.FreeSpace / d.Size * 100)} % libre`))));
   if (!s.disks.length) empty(disks, 'No se pudieron consultar las unidades.');
   const hardware = $('hardware-list'); hardware.replaceChildren(row(s.cpu[0]?.Name || 'Procesador no disponible', `${s.platform} · ${Math.floor(s.uptime / 3600)} h desde el último arranque`));
   s.gpu.forEach(g => hardware.append(row(g.Name, `Controlador ${g.DriverVersion || 'no disponible'}`)));
   const insights = $('insights'); insights.replaceChildren();
   let signals = 0;
-  if ((s.memory.total - s.memory.free) / s.memory.total > .85) { signals++; insights.append(row('La memoria está bastante ocupada', 'Más del 85 % en esta lectura. Revisa las apps con mayor consumo y guarda tu trabajo antes de cerrar las que no necesites.', button('Ver recursos', () => show('processes')))); }
+  if (!s.errors.includes('memory') && (s.memory.total - s.memory.free) / s.memory.total > .85) { signals++; insights.append(row('La memoria está bastante ocupada', 'Más del 85 % en esta lectura. Revisa las apps con mayor consumo y guarda tu trabajo antes de cerrar las que no necesites.', button('Ver recursos', () => show('processes')))); }
   if (cpu !== null && cpu > 80) { signals++; insights.append(row('La CPU está trabajando mucho', 'Más del 80 % en esta muestra. Repite el análisis cuando terminen las tareas actuales; un pico aislado es normal.')); }
-  s.disks.filter(d => d.Size > 0 && d.FreeSpace / d.Size < .15 && d.FreeSpace < 32 * 1024 ** 3).forEach(d => { signals++; insights.append(row(`Poco espacio en ${d.DeviceID}`, 'Menos del 15 % libre. Considera mover archivos que conozcas a otra unidad. StarOptimizer no los borra.', button('Ver unidades', () => show('processes')))); });
+  validDisks.filter(d => d.FreeSpace / d.Size < .15 && d.FreeSpace < 32 * 1024 ** 3).forEach(d => { signals++; insights.append(row(`Poco espacio en ${d.DeviceID}`, 'Menos del 15 % libre. Libera temporales y cachés, o mueve archivos que conozcas a otra unidad.', button('Liberar espacio', () => show('cleanup')))); });
   if (!signals) insights.append(row('Sin presión alta en las lecturas disponibles', 'No se detectan los umbrales de uso alto de CPU, RAM o poco espacio en esta muestra. No es una prueba de salud del hardware.', node('span', 'Sin alertas')));
-  if (s.startup.length) insights.append(row('Revisa lo que arranca contigo', `${s.startup.length} entradas en el inventario. Confirma cuáles están activadas en Windows antes de decidir.`, button('Revisar inicio', () => show('startup'))));
+  // Startup entries are not a problem by themselves; Apps de inicio shows which are actually active.
   const missing = { cpu: 'CPU', disks: 'discos', processes: 'procesos', startup: 'inicio', plans: 'energía', gpu: 'GPU', configuration: 'algunos ajustes de Windows' };
   if (s.errors.length) insights.append(row('Lecturas incompletas', `No disponibles: ${s.errors.map(k => missing[k] || k).join(', ')}. No se asume que estos componentes estén bien ni mal.`));
   $('recommendation-summary').textContent = signals ? `${signals} ${signals === 1 ? 'señal para revisar' : 'señales para revisar'} · Tú decides el siguiente paso.` : 'Tu diagnóstico y los ajustes compatibles.';
@@ -274,7 +288,7 @@ scanEvidence.className = 'micro';
 scanEvidence.setAttribute('aria-live', 'polite');
 modePicker.after(scanEvidence);
 function renderPriorities() {
-  const items = window.starPriorities(snapshot, optimizationMode);
+  const items = window.starPriorities(snapshot, optimizationMode, window.starDevice?.() || null);
   // Every displayed metric comes from the actual Windows snapshot, never a generic demo.
   const facts = [];
   const unavailable = snapshot.errors || [];
@@ -332,7 +346,7 @@ async function performAnalysis(interactive = false) {
     snapshot = await call('scan');
     rollingCpu.length = 0;
     for (const key of Object.keys(draft)) if (snapshot.configuration.values[key] == null || key === 'power' && !snapshot.configuration.plans.some(p => p.id === draft[key])) delete draft[key];
-    render(); tuneup.update(snapshot); const priorities = renderPriorities(); await loadHistory(); completed = snapshot.errors.length === 0;
+    render(); tuneup.update(snapshot); window.onStarSnapshot?.(snapshot); const priorities = renderPriorities(); await loadHistory(); completed = snapshot.errors.length === 0;
     if (interactive) scanExperience.complete(snapshot, priorities);
     return true;
   } catch (e) { $('scan-status').textContent = 'No se pudo completar el análisis. Puedes reintentarlo.'; if (interactive) scanExperience.fail(e.message); toast(e.message); return false; }
@@ -406,7 +420,7 @@ async function review() {
     if (!prepared.changes.length) return toast('Los ajustes ya coinciden con Windows. No hace falta cambiar nada.');
     token = prepared.token;
     $('review-list').replaceChildren(...prepared.changes.map(c => row(c.label, `${c.beforeLabel} → ${c.afterLabel}`)));
-    $('review-warning').textContent = prepared.changes.some(c => c.key === 'power') ? `${snapshot.onBattery ? 'Estás usando batería. ' : ''}Cambiar la energía puede aumentar consumo, temperatura y ruido. No garantiza más FPS.` : 'Se reduce el movimiento de controles compatibles. El efecto depende de cada aplicación y no mejora necesariamente el rendimiento de los juegos.';
+    $('review-warning').textContent = prepared.changes.some(c => c.key === 'power') ? `${snapshot.onBattery ? 'Estás usando batería. ' : ''}Cambiar la energía puede aumentar consumo, temperatura y ruido. No garantiza más FPS.` : 'Son preferencias de Windows: se aplican al momento y puedes restaurarlas desde Historial.';
     $('confirm-apply').textContent = `Aplicar ${prepared.changes.length} ${prepared.changes.length === 1 ? 'ajuste' : 'ajustes'}`;
     $('review-dialog').showModal();
   } catch (e) { toast(e.message); }
@@ -449,7 +463,7 @@ $('export').addEventListener('click', async () => { try { if (await call('export
 function appearance(simple) {
   nova.context({ simple });
   document.body.classList.toggle('simple', simple); $('appearance').setAttribute('aria-pressed', String(simple));
-  $('appearance').querySelector('span').textContent = simple ? 'Sencilla' : 'Cristal';
+  $('appearance').querySelector('span').textContent = simple ? 'Efectos: reducidos' : 'Efectos: completos';
   $('appearance').title = simple ? 'Volver a la apariencia de cristal' : 'Usar apariencia sencilla, con menos efectos';
   try { localStorage.setItem('star-simple', String(simple)); } catch { /* Appearance remains usable without storage. */ }
 }
@@ -463,7 +477,7 @@ function theme(dark) {
   try { localStorage.setItem('star-dark', String(dark)); } catch { /* Theme remains usable without storage. */ }
 }
 $('theme').addEventListener('click', () => theme(!document.body.classList.contains('dark')));
-try { theme(localStorage.getItem('star-dark') === 'true'); } catch { /* Default light theme. */ }
+try { theme(localStorage.getItem('star-dark') !== 'false'); } catch { theme(true); }
 document.addEventListener('visibilitychange', () => { document.body.classList.toggle('paused', document.hidden); scheduleLive(); });
 api?.onBusyClose(() => toast('Estamos verificando un cambio. Espera a que termine antes de cerrar la app.'));
 loadHistory();
