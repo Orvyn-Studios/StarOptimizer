@@ -59,7 +59,7 @@ window.createScanExperience = function ({ takeNova, returnNova, navigate, nova, 
   /* The plan: what was found, as a checklist. Fixable rows are pre-selected; the rest link to their view. */
   function showPlan(items, partial) {
     const fixes = items.filter(fixable), checks = items.filter(i => !fixable(i));
-    setStage('done', fixes.length ? 'Este es tu plan.' : items.length ? 'Hay cosas que revisar.' : 'Todo en orden.',
+    setStage('done', partial ? 'Plan con lecturas pendientes.' : fixes.length ? 'Este es tu plan.' : items.length ? 'Hay cosas que revisar.' : 'Todo en orden.',
       fixes.length ? 'Marca lo que quieras arreglar. Antes de tocar nada verás exactamente qué cambia.'
         : items.length ? 'No hay nada que arreglar automáticamente; abre cada punto para verlo.'
         : `No hemos encontrado nada que arreglar${partial ? ' en los datos que se pudieron leer' : ''}. Tu equipo no se ha modificado.`);
