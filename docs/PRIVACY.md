@@ -1,6 +1,6 @@
 # Política de privacidad de StarOptimizer
 
-Última actualización: 18 de noviembre de 2026
+Última actualización: 24 de noviembre de 2026
 
 StarOptimizer es una aplicación para Windows publicada por Snow099. Esta política explica qué datos usa y qué hace con ellos.
 
@@ -24,13 +24,14 @@ Estos datos se usan solo para mostrarte el diagnóstico en pantalla y no salen d
 
 ## Qué guarda la aplicación
 
-En la carpeta de datos de la aplicación, dentro de tu perfil de Windows, se guardan:
+En la carpeta privada de la aplicación (`%LOCALAPPDATA%\Packages\Snow099.StarOptimizer_…\LocalState`) se guardan:
 
-- Un historial de los ajustes que has aplicado, con el valor anterior, para poder deshacerlos.
-- Un registro de las limpiezas realizadas (categorías y espacio liberado).
+- Un historial de los ajustes que has aplicado, con el valor anterior, para poder deshacerlos (todo lo que aún se puede restaurar y los 100 últimos cambios terminados).
+- Un registro de las 100 últimas limpiezas (categorías y espacio liberado).
+- Las 50 últimas mediciones de rendimiento que hayas guardado.
 - Tus preferencias de la aplicación (tema, tipo de equipo, objetivo de optimización).
 
-Puedes borrar estos datos desinstalando la aplicación.
+Al desinstalar la aplicación, Windows borra esta carpeta por completo. Qué cambia la aplicación, cómo deshacerlo y cómo desinstalarla del todo: [CHANGES_AND_REMOVAL.md](CHANGES_AND_REMOVAL.md).
 
 ## Cambios en tu equipo
 

@@ -90,6 +90,10 @@ function createOptimizer(directory, adapter, now = Date.now) {
       if (prepared.changes.some(c => current.values[c.key] !== c.before || c.key === 'power' && !current.plans.some(p => p.id === c.after))) throw Error('Windows cambió desde la revisión. Vuelve a revisar los ajustes.');
       const entry = { id: randomUUID(), at: new Date(now()).toISOString(), title: prepared.changes.length === 1 ? prepared.changes[0].label : `Optimización · ${prepared.changes.length} ajustes`, status: 'pending', changes: structuredClone(prepared.changes) };
       entries.unshift(entry);
+      // Retention: every entry that can still be restored, plus the 100 most recent finished ones.
+      let finished = 0;
+      const kept = entries.filter(e => active(e) || ++finished <= 100);
+      entries.splice(0, entries.length, ...kept);
       await save(entries);
       try {
         for (const change of entry.changes) {

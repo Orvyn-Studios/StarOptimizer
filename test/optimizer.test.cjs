@@ -121,3 +121,14 @@ test('overlapping apply calls are serialized by rejecting the second', async t =
   await assert.rejects(f.optimizer.apply(p2.token)); await first;
   assert.equal(f.values.animations, true);
 });
+test('history keeps every restorable entry and only the 100 newest finished ones', async t => {
+  const f = await fixture(t);
+  const old = Array.from({ length: 120 }, (_, i) => ({ id: randomUUID(), at: new Date(Date.UTC(2026, 0, 1, 0, i)).toISOString(), title: 'Antiguo', status: 'restored', changes: [{ key: 'animations', label: 'x', before: true, after: false, state: 'restored' }] }));
+  await fs.writeFile(path.join(f.directory, 'optimization-journal.json'), JSON.stringify(old));
+  const p = await f.optimizer.preview({ animations: false });
+  await f.optimizer.apply(p.token);
+  const history = await f.optimizer.history();
+  assert.equal(history.length, 101);
+  assert.equal(history[0].status, 'applied');
+  assert.equal(history.at(-1).id, old[99].id);
+});

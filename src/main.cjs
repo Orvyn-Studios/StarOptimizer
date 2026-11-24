@@ -8,6 +8,15 @@ const { createMeasurements } = require('./measurements.cjs');
 const tools = require('./tools.cjs');
 let window, lastScan, scanning, sampling, mutation = false, measuring = false;
 app.setName('StarOptimizer');
+// Store package: write virtualization is disabled, so %APPDATA% would outlive an uninstall.
+// Keep our own data in the package's LocalState folder, which Windows deletes on uninstall.
+if (process.windowsStore && process.env.LOCALAPPDATA) {
+  const packages = path.join(process.env.LOCALAPPDATA, 'Packages');
+  try {
+    const own = require('node:fs').readdirSync(packages).find(name => /^Snow099\.StarOptimizer_[a-z0-9]{13}$/i.test(name));
+    if (own) app.setPath('userData', path.join(packages, own, 'LocalState'));
+  } catch { /* Fall back to the default folder. */ }
+}
 const page = pathToFileURL(path.join(__dirname, 'index.html')).href;
 if (!app.requestSingleInstanceLock()) app.quit();
 else {

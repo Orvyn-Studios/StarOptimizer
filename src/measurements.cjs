@@ -30,7 +30,7 @@ function createMeasurements(directory, sample, context) {
       const environment = await context(); const samples = []; const start = Date.now();
       for(let i=0;i<12;i++) samples.push(await sample());
       const entry = { kind, at: new Date().toISOString(), durationMs: Date.now()-start, context: environment, summary: summarize(samples) };
-      entries.push(entry); await fs.mkdir(directory,{recursive:true});
+      entries.push(entry); entries.splice(0, Math.max(0, entries.length - 50)); await fs.mkdir(directory,{recursive:true});
       await fs.writeFile(file+'.tmp',JSON.stringify(entries,null,2),{encoding:'utf8',flush:true}); await fs.rename(file+'.tmp',file);
       return entries;
     } finally { busy = false; }
